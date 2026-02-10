@@ -24,5 +24,13 @@ final class AppRouter: ObservableObject {
         route = .auth
     }
 
-    //TODO: Login / Home ke,idi əlavə olunacaq
+    func didLogin() {
+        AppPreferences.shared.isLoggedIn = true
+        route = .home
+    }
+
+    func didLogout() {
+        AppPreferences.shared.isLoggedIn = false
+        route = .auth
+    }
 }
