@@ -4,18 +4,30 @@
 //
 //  Created by Əzi Cəbrayılov on 10.02.26.
 //
-
 import SwiftUI
 
 struct ContentView: View {
+
+    @StateObject private var router = AppRouter()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch router.route {
+            case .onboarding:
+                OnboardingView {
+                    router.finishOnboarding()
+                }
+
+            case .auth:
+                LoginView()
+
+            case .home:
+                Text("Home")
+            }
         }
-        .padding()
+        .onAppear {
+            router.resolveInitialRoute()
+        }
     }
 }
 
