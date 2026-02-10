@@ -15,7 +15,7 @@ final class AppPreferences {
 
     private enum Keys {
         static let hasSeenOnboarding = "hasSeenOnboarding"
-        
+        static let isLoggedIn = "isLoggedIn"
     }
 
     var hasSeenOnboarding: Bool {
