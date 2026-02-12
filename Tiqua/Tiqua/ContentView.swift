@@ -8,25 +8,18 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @StateObject private var router = AppRouter()
+    @EnvironmentObject var router: AppRouter
 
     var body: some View {
-        Group {
-            switch router.route {
-            case .onboarding:
-                OnboardingView {
-                    router.finishOnboarding()
-                }
-
-            case .auth:
-                LoginView()
-
-            case .home:
-                Text("Home")
-            }
-        }
-        .onAppear {
-            router.resolveInitialRoute()
+        switch router.route {
+        case .onboarding:
+            OnboardingView()
+        case .login:
+            LoginView()
+        case .register:
+            RegisterView()
+        case .home:
+            HomeView()
         }
     }
 }

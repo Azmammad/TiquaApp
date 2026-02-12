@@ -10,13 +10,21 @@ import Firebase
 
 @main
 struct TiquaApp: App {
+    @StateObject private var prefs = AppPreferences()
+    @StateObject private var router: AppRouter
     
     init() {
-        FirebaseApp.configure() 
+        FirebaseApp.configure()
+        let prefs = AppPreferences()
+        _prefs = StateObject(wrappedValue: prefs)
+        _router = StateObject(wrappedValue: AppRouter(prefs: prefs))
     }
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(prefs)
+                .environmentObject(router)
+                .preferredColorScheme(prefs.isDarkMode ? .dark : .light)
         }
     }
 }
