@@ -6,6 +6,7 @@
 //
 enum AppRoute {
     case onboarding
-    case auth
+    case login
+    case register
     case home
 }
