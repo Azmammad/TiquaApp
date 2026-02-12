@@ -43,12 +43,14 @@ final class RegisterViewModel: ObservableObject {
     }
 
     private func checkUsernameAvailability(_ value: String) async {
-        guard !value.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedValue.isEmpty else {
             isUsernameAvailable = nil
             return
         }
 
-        guard value.count >= 3 else {
+        guard trimmedValue.count >= 3 else {
             isUsernameAvailable = nil
             return
         }
@@ -56,7 +58,7 @@ final class RegisterViewModel: ObservableObject {
         isCheckingUsername = true
 
         do {
-            let available = try await authService.checkUsernameAvailability(value)
+            let available = try await authService.checkUsernameAvailability(trimmedValue)
             isUsernameAvailable = available
         } catch {
             isUsernameAvailable = nil
@@ -72,12 +74,12 @@ final class RegisterViewModel: ObservableObject {
 
         do {
             _ = try await authService.register(
-                username: username,
-                email: email,
+                username: username.trimmingCharacters(in: .whitespacesAndNewlines),
+                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
                 password: password
             )
             didRegisterSuccessfully = true
-            show("Account created! Please check your email to verify your account.", isSuccess: true)
+            show("Account created successfully! Please check your email to verify your account.", isSuccess: true)
         } catch let error as AuthError {
             show(error.localizedDescription)
         } catch {
@@ -88,22 +90,24 @@ final class RegisterViewModel: ObservableObject {
     }
 
     private func validateInputs() -> Bool {
-        if username.trimmingCharacters(in: .whitespaces).isEmpty {
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedUsername.isEmpty {
             show("Username is required.")
             return false
         }
 
-        if username.count < 3 {
+        if trimmedUsername.count < 3 {
             show("Username must be at least 3 characters long.")
             return false
         }
 
-        if email.trimmingCharacters(in: .whitespaces).isEmpty {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedEmail.isEmpty {
             show("Email is required.")
             return false
         }
 
-        if !isValidEmail(email) {
+        if !isValidEmail(trimmedEmail) {
             show("Please enter a valid email address.")
             return false
         }
@@ -119,7 +123,7 @@ final class RegisterViewModel: ObservableObject {
         }
 
         if isUsernameAvailable == false {
-            show("This username is not available.")
+            show("This username is not available. Please choose another one.")
             return false
         }
 
@@ -133,7 +137,7 @@ final class RegisterViewModel: ObservableObject {
     }
 
     private func parseFriendlyError(_ error: Error) -> String {
-        let errorMessage = error.localizedDescription
+        let errorMessage = error.localizedDescription.lowercased()
         
         if errorMessage.contains("network") || errorMessage.contains("internet") {
             return "Network error. Please check your internet connection."
@@ -147,7 +151,11 @@ final class RegisterViewModel: ObservableObject {
             return "Password is too weak. Please use a stronger password."
         }
         
-        return "An error occurred. Please try again."
+        if errorMessage.contains("username") && errorMessage.contains("taken") {
+            return "This username is already taken. Please choose another one."
+        }
+        
+        return "Registration failed. Please try again."
     }
 
     private func show(_ message: String, isSuccess: Bool = false) {

@@ -64,24 +64,14 @@ final class FirebaseAuthService: AuthService {
         if identifier.contains("@") {
             email = identifier
         } else {
-            let usernameLower = identifier.lowercased()
-            let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
-            
-            guard let uid = usernameSnap.data()?["uid"] as? String else {
-                throw AuthError.userNotFound
-            }
-
-            let userSnap = try await db.collection("users").document(uid).getDocument()
-            guard let emailValue = userSnap.data()?["email"] as? String else {
-                throw AuthError.userNotFound
-            }
-            email = emailValue
+            email = try await getEmail(from: identifier)
         }
 
         let result = try await auth.signIn(withEmail: email, password: password)
         let firebaseUser = result.user
 
         try await firebaseUser.reload()
+        
         if !firebaseUser.isEmailVerified {
             try await auth.signOut()
             throw AuthError.emailNotVerified
@@ -100,7 +90,7 @@ final class FirebaseAuthService: AuthService {
 
         let isEmailVerified = data["isEmailVerified"] as? Bool ?? firebaseUser.isEmailVerified
 
-        if !isEmailVerified {
+        if !isEmailVerified && firebaseUser.isEmailVerified {
             try await db.collection("users").document(uid).setData(
                 ["isEmailVerified": true],
                 merge: true
@@ -112,7 +102,7 @@ final class FirebaseAuthService: AuthService {
             username: username,
             email: email,
             createdAt: createdAt,
-            isEmailVerified: true
+            isEmailVerified: firebaseUser.isEmailVerified
         )
     }
 
@@ -131,7 +121,6 @@ final class FirebaseAuthService: AuthService {
             let doc = try await db.collection("usernames").document(usernameLower).getDocument()
             return !doc.exists
         } catch {
-            // If Firestore permission error, throw a more user-friendly error
             if error.localizedDescription.contains("permission") {
                 throw NSError(
                     domain: "FirebaseError",
@@ -166,5 +155,24 @@ final class FirebaseAuthService: AuthService {
             createdAt: createdAt,
             isEmailVerified: isEmailVerified
         )
+    }
+
+    func getEmail(from username: String) async throws -> String {
+        let usernameLower = username.lowercased()
+        
+        let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
+        
+        guard usernameSnap.exists,
+              let uid = usernameSnap.data()?["uid"] as? String else {
+            throw AuthError.userNotFound
+        }
+
+        let userSnap = try await db.collection("users").document(uid).getDocument()
+        
+        guard let email = userSnap.data()?["email"] as? String else {
+            throw AuthError.userNotFound
+        }
+
+        return email
     }
 }

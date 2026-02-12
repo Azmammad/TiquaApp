@@ -14,11 +14,11 @@ enum AuthError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usernameTaken:
-            return "This username is already taken."
+            return "This username is already taken. Please choose another one."
         case .userNotFound:
-            return "User not found."
+            return "Username or email not found. Please check and try again."
         case .emailNotVerified:
-            return "Please verify your email before logging in."
+            return "Please verify your email before logging in. Check your inbox for the verification link."
         }
     }
 }

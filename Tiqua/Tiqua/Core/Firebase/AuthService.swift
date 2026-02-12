@@ -13,5 +13,5 @@ protocol AuthService {
     func sendPasswordReset(email: String) async throws
     func checkUsernameAvailability(_ username: String) async throws -> Bool
     func getCurrentUser() async throws -> User?
+    func getEmail(from username: String) async throws -> String
 }
-
