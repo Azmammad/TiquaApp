@@ -5,22 +5,35 @@
 //  Created by Əzi Cəbrayılov on 10.02.26.
 //
 import Foundation
+import Combine
 
-final class AppPreferences {
-
+final class AppPreferences: ObservableObject {
     static let shared = AppPreferences()
-    private init() {}
 
-    private let defaults = UserDefaults.standard
+    @Published var hasSeenOnboarding: Bool {
+        didSet { UserDefaults.standard.set(hasSeenOnboarding, forKey: Keys.onboarding) }
+    }
+
+    @Published var isLoggedIn: Bool {
+        didSet { UserDefaults.standard.set(isLoggedIn, forKey: Keys.loggedIn) }
+    }
+
+    @Published var isDarkMode: Bool {
+        didSet { UserDefaults.standard.set(isDarkMode, forKey: Keys.darkMode) }
+    }
 
     private enum Keys {
-        static let hasSeenOnboarding = "hasSeenOnboarding"
-        static let isLoggedIn = "isLoggedIn"
+        static let onboarding = "hasSeenOnboarding"
+        static let loggedIn = "isLoggedIn"
+        static let darkMode = "isDarkMode"
     }
 
-    var hasSeenOnboarding: Bool {
-        get { defaults.bool(forKey: Keys.hasSeenOnboarding) }
-        set { defaults.set(newValue, forKey: Keys.hasSeenOnboarding) }
+    init() {
+        self.hasSeenOnboarding = UserDefaults.standard.bool(forKey: Keys.onboarding)
+        self.isLoggedIn = UserDefaults.standard.bool(forKey: Keys.loggedIn)
+        self.isDarkMode = UserDefaults.standard.bool(forKey: Keys.darkMode)
     }
 }
+
+
 
