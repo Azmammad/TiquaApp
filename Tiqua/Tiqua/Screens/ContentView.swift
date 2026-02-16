@@ -18,8 +18,8 @@ struct ContentView: View {
             LoginView()
         case .register:
             RegisterView()
-        case .home:
-            HomeView()
+        case .maintab:
+            MainTabView()
         }
     }
 }
