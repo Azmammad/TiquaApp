@@ -1,21 +1,27 @@
 //
-//  HomeView.swift
+//  CreateView.swift
 //  Tiqua
 //
-//  Created by Əzi Cəbrayılov on 11.02.26.
+//  Created by Əzi Cəbrayılov on 14.02.26.
 //
+
 import SwiftUI
 
-struct HomeView: View {
+struct CreateView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    Text("Welcome to Tiqua")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.accentColor)
+                        .padding(.top, 40)
+                    
+                    Text("Create New Post")
                         .font(.system(size: 28, weight: .bold))
                         .padding(.top, 20)
                     
-                    Text("Your authentic travel experiences start here")
+                    Text("Share your authentic travel experiences with the world")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -24,12 +30,12 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
             }
-            .navigationTitle("Home")
+            .navigationTitle("Create")
             .navigationBarTitleDisplayMode(.large)
         }
     }
 }
 
 #Preview {
-    HomeView()
+    CreateView()
 }
