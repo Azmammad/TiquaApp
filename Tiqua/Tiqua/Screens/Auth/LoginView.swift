@@ -122,7 +122,7 @@ struct LoginView: View {
             .onChange(of: viewModel.didLogin) { newValue in
                 if newValue {
                     preferences.isLoggedIn = true
-                    router.route = .home
+                    router.route = .maintab
                 }
             }
             .alert("Error", isPresented: $viewModel.showAlert) {
