@@ -8,5 +8,5 @@ enum AppRoute {
     case onboarding
     case login
     case register
-    case home
+    case maintab
 }

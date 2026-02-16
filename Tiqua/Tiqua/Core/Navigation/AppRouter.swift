@@ -21,7 +21,7 @@ final class AppRouter: ObservableObject {
 
     func refreshRoute() {
         if !prefs.hasSeenOnboarding { route = .onboarding; return }
-        route = prefs.isLoggedIn ? .home : .login
+        route = prefs.isLoggedIn ? .maintab : .login
     }
 }
 
