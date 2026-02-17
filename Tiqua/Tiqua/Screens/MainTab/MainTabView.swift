@@ -46,7 +46,7 @@ struct MainTabView: View {
                 }
                 .tag(Tab.profile)
         }
-        .tint(.accentColor)
+        .tint(.inside)
     }
 }
 
