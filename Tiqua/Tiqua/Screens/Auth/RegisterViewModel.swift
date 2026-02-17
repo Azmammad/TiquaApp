@@ -21,12 +21,16 @@ final class RegisterViewModel: ObservableObject {
     @Published var alertMessage: String = ""
     @Published var didRegisterSuccessfully: Bool = false
 
-    private let authService: AuthService
+    private let authService: AuthServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
-    init(authService: AuthService = FirebaseAuthService()) {
+    init(authService: AuthServiceProtocol) {
         self.authService = authService
         observeUsernameChanges()
+    }
+
+    convenience init() {
+        self.init(authService: FirebaseAuthService())
     }
 
     private func observeUsernameChanges() {
@@ -44,7 +48,7 @@ final class RegisterViewModel: ObservableObject {
 
     private func checkUsernameAvailability(_ value: String) async {
         let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmedValue.isEmpty else {
             isUsernameAvailable = nil
             return
@@ -62,7 +66,6 @@ final class RegisterViewModel: ObservableObject {
             isUsernameAvailable = available
         } catch {
             isUsernameAvailable = nil
-            print("Username availability check error: \(error.localizedDescription)")
         }
 
         isCheckingUsername = false
@@ -138,23 +141,23 @@ final class RegisterViewModel: ObservableObject {
 
     private func parseFriendlyError(_ error: Error) -> String {
         let errorMessage = error.localizedDescription.lowercased()
-        
+
         if errorMessage.contains("network") || errorMessage.contains("internet") {
             return "Network error. Please check your internet connection."
         }
-        
+
         if errorMessage.contains("email") && errorMessage.contains("already") {
             return "This email is already registered. Please login or use a different email."
         }
-        
+
         if errorMessage.contains("password") && errorMessage.contains("weak") {
             return "Password is too weak. Please use a stronger password."
         }
-        
+
         if errorMessage.contains("username") && errorMessage.contains("taken") {
             return "This username is already taken. Please choose another one."
         }
-        
+
         return "Registration failed. Please try again."
     }
 

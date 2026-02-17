@@ -7,13 +7,13 @@
 import SwiftUI
 
 struct LoginView: View {
-    
+
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject var preferences: AppPreferences
-    
+
     @StateObject private var viewModel = LoginViewModel()
     @State private var showForgotPassword = false
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -23,20 +23,20 @@ struct LoginView: View {
                             .font(.system(size: 40, weight: .bold))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .foregroundStyle(.appPrimary)
-                        
+
                         Text("Welcome back to authentic travel")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(.top, 60)
-                    
+
                     VStack(spacing: 20) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Username or Email")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.primary)
-                            
+
                             CustomTextField(
                                 text: $viewModel.identifier,
                                 placeholder: "Enter your username or email",
@@ -47,15 +47,15 @@ struct LoginView: View {
                                 isError: false
                             )
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Password")
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundColor(.primary)
-                                
+
                                 Spacer()
-                                
+
                                 Button {
                                     showForgotPassword = true
                                 } label: {
@@ -64,7 +64,7 @@ struct LoginView: View {
                                         .foregroundColor(.accentColor)
                                 }
                             }
-                            
+
                             CustomTextField(
                                 text: $viewModel.password,
                                 placeholder: "Enter your password",
@@ -77,7 +77,7 @@ struct LoginView: View {
                         }
                     }
                     .padding(.top, 32)
-                    
+
                     PrimaryButton(
                         title: "Log In",
                         isLoading: viewModel.isLoading,
@@ -88,12 +88,12 @@ struct LoginView: View {
                         }
                     }
                     .padding(.top, 16)
-                    
+
                     HStack(spacing: 4) {
                         Text("Don't have an account?")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
-                        
+
                         Button {
                             router.route = .register
                         } label: {
@@ -119,7 +119,7 @@ struct LoginView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.didLogin) { newValue in
+            .onChange(of: viewModel.didLogin) { _, newValue in
                 if newValue {
                     preferences.isLoggedIn = true
                     router.route = .maintab
@@ -132,33 +132,9 @@ struct LoginView: View {
             }
             .sheet(isPresented: $showForgotPassword) {
                 ForgotPasswordView { email in
-                    try await handleForgotPassword(email: email)
+                    try await viewModel.sendPasswordReset(email: email)
                 }
             }
         }
-    }
-    
-    private func handleForgotPassword(email: String) async throws -> String {
-        guard !email.isEmpty else {
-            throw NSError(
-                domain: "ValidationError",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Please enter your email address."]
-            )
-        }
-        
-        let emailRegex = #"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$"#
-        let emailPredicate = NSPredicate(format: "SELF MATCHES[c] %@", emailRegex)
-        
-        guard emailPredicate.evaluate(with: email) else {
-            throw NSError(
-                domain: "ValidationError",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Please enter a valid email address."]
-            )
-        }
-        
-        try await FirebaseAuthService().sendPasswordReset(email: email)
-        return "Password reset link sent! Please check your email."
     }
 }

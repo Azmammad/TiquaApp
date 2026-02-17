@@ -8,6 +8,7 @@ import Foundation
 import Combine
 import FirebaseAuth
 
+@MainActor
 final class LoginViewModel: ObservableObject {
     @Published var identifier: String = ""
     @Published var password: String = ""
@@ -17,10 +18,14 @@ final class LoginViewModel: ObservableObject {
     @Published var alertMessage: String = ""
     @Published var didLogin: Bool = false
 
-    private let authService: AuthService
+    private let authService: AuthServiceProtocol
 
-    init(authService: AuthService = FirebaseAuthService()) {
+    init(authService: AuthServiceProtocol) {
         self.authService = authService
+    }
+
+    convenience init() {
+        self.init(authService: FirebaseAuthService())
     }
 
     func login() async {
@@ -44,6 +49,32 @@ final class LoginViewModel: ObservableObject {
         isLoading = false
     }
 
+    func sendPasswordReset(email: String) async throws -> String {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedEmail.isEmpty else {
+            throw NSError(
+                domain: "ValidationError",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "Please enter your email address."]
+            )
+        }
+
+        let emailRegex = #"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$"#
+        let emailPredicate = NSPredicate(format: "SELF MATCHES[c] %@", emailRegex)
+
+        guard emailPredicate.evaluate(with: trimmedEmail) else {
+            throw NSError(
+                domain: "ValidationError",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "Please enter a valid email address."]
+            )
+        }
+
+        try await authService.sendPasswordReset(email: trimmedEmail)
+        return "Password reset link sent! Please check your email."
+    }
+
     private func validateInputs() -> Bool {
         let trimmedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedIdentifier.isEmpty {
@@ -61,7 +92,7 @@ final class LoginViewModel: ObservableObject {
 
     private func parseFriendlyError(_ error: NSError) -> String {
         let errorMessage = error.localizedDescription.lowercased()
-        
+
         if error.domain == AuthErrorDomain {
             switch error.code {
             case AuthErrorCode.userNotFound.rawValue:
@@ -80,23 +111,23 @@ final class LoginViewModel: ObservableObject {
                 break
             }
         }
-        
+
         if errorMessage.contains("user not found") {
             return "Username or email not found. Please check and try again."
         }
-        
+
         if errorMessage.contains("email") && errorMessage.contains("not verified") {
             return "Please verify your email before logging in. Check your inbox for verification link."
         }
-        
+
         if errorMessage.contains("network") || errorMessage.contains("internet") {
             return "Network error. Please check your internet connection."
         }
-        
+
         if errorMessage.contains("password") && (errorMessage.contains("wrong") || errorMessage.contains("invalid") || errorMessage.contains("incorrect")) {
             return "Incorrect password. Please try again."
         }
-        
+
         return "Login failed. Please check your credentials and try again."
     }
 

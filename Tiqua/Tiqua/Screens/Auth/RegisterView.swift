@@ -9,9 +9,7 @@ import SwiftUI
 struct RegisterView: View {
     @EnvironmentObject var router: AppRouter
     @StateObject private var viewModel = RegisterViewModel()
-    
-    @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -22,20 +20,19 @@ struct RegisterView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .foregroundStyle(.appPrimary)
 
-                        
                         Text("Join Tiqua and start sharing your authentic travel experiences")
                             .font(.system(size: 13, weight: .regular))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(.top, 24)
-                    
+
                     VStack(spacing: 20) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Username")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.primary)
-                            
+
                             CustomTextField(
                                 text: $viewModel.username,
                                 placeholder: "Choose a unique username",
@@ -46,12 +43,12 @@ struct RegisterView: View {
                                 isError: false
                             )
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Email")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.primary)
-                            
+
                             CustomTextField(
                                 text: $viewModel.email,
                                 placeholder: "your@email.com",
@@ -62,12 +59,12 @@ struct RegisterView: View {
                                 isError: false
                             )
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Password")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.primary)
-                            
+
                             CustomTextField(
                                 text: $viewModel.password,
                                 placeholder: "At least 8 characters",
@@ -79,13 +76,13 @@ struct RegisterView: View {
                             )
                         }
                     }
-                    
+
                     Text("By signing up, you agree to our Terms of Service and Privacy Policy")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.top, 8)
-                    
+
                     PrimaryButton(
                         title: "Create Account",
                         isLoading: viewModel.isLoading,
@@ -96,12 +93,12 @@ struct RegisterView: View {
                         }
                     }
                     .padding(.top, 8)
-                    
+
                     HStack(spacing: 4) {
                         Text("Already have an account?")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
-                        
+
                         Button {
                             router.route = .login
                         } label: {
@@ -124,13 +121,6 @@ struct RegisterView: View {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.primary)
-                    }
-                }
-            }
-            .onChange(of: viewModel.didRegisterSuccessfully) { newValue in
-                if newValue {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        router.route = .login
                     }
                 }
             }

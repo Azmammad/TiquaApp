@@ -4,7 +4,6 @@
 //
 //  Created by Generated on 11.02.26.
 //
-
 import SwiftUI
 
 struct ForgotPasswordView: View {
@@ -12,11 +11,12 @@ struct ForgotPasswordView: View {
     @State private var isSubmitting: Bool = false
     @State private var showAlert: Bool = false
     @State private var alertMessage: String = ""
-    
+    @State private var isSuccess: Bool = false
+
     @Environment(\.dismiss) private var dismiss
-    
+
     let onSubmit: (String) async throws -> String
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,19 +25,19 @@ struct ForgotPasswordView: View {
                         Text("Forgot Password")
                             .font(.system(size: 32, weight: .bold))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        
+
                         Text("Enter your email address and we'll send you a link to reset your password")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.top, 24)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Email")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.primary)
-                        
+
                         CustomTextField(
                             text: $email,
                             placeholder: "your@email.com",
@@ -49,7 +49,7 @@ struct ForgotPasswordView: View {
                         )
                     }
                     .padding(.top, 16)
-                    
+
                     PrimaryButton(
                         title: "Send Reset Link",
                         isLoading: isSubmitting,
@@ -76,9 +76,9 @@ struct ForgotPasswordView: View {
                     }
                 }
             }
-            .alert(alertMessage.contains("sent") ? "Success" : "Error", isPresented: $showAlert) {
+            .alert(isSuccess ? "Success" : "Error", isPresented: $showAlert) {
                 Button("OK", role: .cancel) {
-                    if alertMessage.contains("sent") {
+                    if isSuccess {
                         dismiss()
                     }
                 }
@@ -87,18 +87,20 @@ struct ForgotPasswordView: View {
             }
         }
     }
-    
+
     private func submit() async {
         guard !email.isEmpty else { return }
         isSubmitting = true
-        
+
         do {
             let message = try await onSubmit(email)
             alertMessage = message
+            isSuccess = true
         } catch {
             alertMessage = error.localizedDescription
+            isSuccess = false
         }
-        
+
         showAlert = true
         isSubmitting = false
     }
