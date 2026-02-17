@@ -5,7 +5,6 @@
 //  Created by Əzi Cəbrayılov on 16.02.26.
 //
 import Foundation
-import UIKit
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
@@ -77,7 +76,7 @@ final class ProfileService: ProfileServiceProtocol {
         ], merge: true)
     }
 
-    func uploadProfileImage(_ image: UIImage) async throws -> String {
+    func uploadProfileImage(_ imageData: Data) async throws -> String {
         guard let currentUser = try await authService.getCurrentUser() else {
             throw NSError(
                 domain: "ProfileService",
@@ -87,14 +86,6 @@ final class ProfileService: ProfileServiceProtocol {
         }
 
         let uid = currentUser.id
-
-        guard let imageData = compressImage(image) else {
-            throw NSError(
-                domain: "ProfileService",
-                code: 400,
-                userInfo: [NSLocalizedDescriptionKey: "Failed to compress image"]
-            )
-        }
 
         let storageRef = storage.reference()
         let profileImageRef = storageRef.child("profile_images/\(uid).jpg")
@@ -113,26 +104,5 @@ final class ProfileService: ProfileServiceProtocol {
         )
 
         return urlString
-    }
-
-    private func compressImage(_ image: UIImage) -> Data? {
-        let maxSize: CGFloat = 1024
-        let size = image.size
-
-        var newSize: CGSize
-        if size.width > size.height {
-            let ratio = maxSize / size.width
-            newSize = CGSize(width: maxSize, height: size.height * ratio)
-        } else {
-            let ratio = maxSize / size.height
-            newSize = CGSize(width: size.width * ratio, height: maxSize)
-        }
-
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        let resizedImage = renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
-
-        return resizedImage.jpegData(compressionQuality: 0.7)
     }
 }

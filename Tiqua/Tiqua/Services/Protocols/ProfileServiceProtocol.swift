@@ -6,10 +6,9 @@
 //
 
 import Foundation
-import UIKit
 
 protocol ProfileServiceProtocol {
     func fetchCurrentUser() async throws -> User
     func updateProfile(fullName: String, bio: String) async throws
-    func uploadProfileImage(_ image: UIImage) async throws -> String
+    func uploadProfileImage(_ imageData: Data) async throws -> String
 }

@@ -91,7 +91,16 @@ final class EditProfileViewModel: ObservableObject {
             }
 
             selectedImage = uiImage
-            let url = try await profileService.uploadProfileImage(uiImage)
+
+            guard let compressedData = compressImage(uiImage) else {
+                throw NSError(
+                    domain: "EditProfileViewModel",
+                    code: 400,
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to compress image"]
+                )
+            }
+
+            let url = try await profileService.uploadProfileImage(compressedData)
             profileImageURL = url
         } catch {
             errorMessage = "Failed to upload image: \(error.localizedDescription)"
@@ -99,5 +108,26 @@ final class EditProfileViewModel: ObservableObject {
         }
 
         isUploadingImage = false
+    }
+
+    private func compressImage(_ image: UIImage) -> Data? {
+        let maxSize: CGFloat = 1024
+        let size = image.size
+
+        var newSize: CGSize
+        if size.width > size.height {
+            let ratio = maxSize / size.width
+            newSize = CGSize(width: maxSize, height: size.height * ratio)
+        } else {
+            let ratio = maxSize / size.height
+            newSize = CGSize(width: size.width * ratio, height: maxSize)
+        }
+
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resizedImage = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resizedImage.jpegData(compressionQuality: 0.7)
     }
 }
