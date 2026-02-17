@@ -9,11 +9,10 @@ import Combine
 
 @MainActor
 final class AppRouter: ObservableObject {
-    static let shared = AppRouter(prefs: AppPreferences.shared)
-
     @Published var route: AppRoute = .onboarding
 
-    let prefs: AppPreferences
+    private let prefs: AppPreferences
+
     init(prefs: AppPreferences) {
         self.prefs = prefs
         refreshRoute()

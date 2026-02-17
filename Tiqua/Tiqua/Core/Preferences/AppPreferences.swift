@@ -7,9 +7,8 @@
 import Foundation
 import Combine
 
+@MainActor
 final class AppPreferences: ObservableObject {
-    static let shared = AppPreferences()
-
     @Published var hasSeenOnboarding: Bool {
         didSet { UserDefaults.standard.set(hasSeenOnboarding, forKey: Keys.onboarding) }
     }
