@@ -25,7 +25,7 @@ struct MainTabView: View {
                 }
                 .tag(Tab.home)
             
-            CreateView()
+            CreatePostView()
                 .tabItem {
                     Image(systemName: "plus.circle.fill")
                     Text("Create")
