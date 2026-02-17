@@ -4,7 +4,6 @@
 //
 //  Created by Əzi Cəbrayılov on 11.02.26.
 //
-
 import SwiftUI
 
 struct PrimaryButton: View {
@@ -12,7 +11,7 @@ struct PrimaryButton: View {
     let isLoading: Bool
     let isDisabled: Bool
     let action: () -> Void
-    
+
     init(
         title: String,
         isLoading: Bool = false,
@@ -24,7 +23,7 @@ struct PrimaryButton: View {
         self.isDisabled = isDisabled
         self.action = action
     }
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
@@ -33,7 +32,7 @@ struct PrimaryButton: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(0.9)
                 }
-                
+
                 Text(title)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
@@ -41,7 +40,7 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
-                (isDisabled || isLoading) ? Color.appPrimary : Color.accentColor
+                (isDisabled || isLoading) ? Color.accentColor.opacity(0.5) : Color.accentColor
             )
             .cornerRadius(16)
         }
