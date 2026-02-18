@@ -4,32 +4,36 @@
 //
 //  Created by Əzi Cəbrayılov on 17.02.26.
 //
-
-
 import Foundation
 import Combine
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
     @Published var user: User?
+    @Published var posts: [Post] = []
     @Published var isLoading: Bool = false
+    @Published var isLoadingPosts: Bool = false
     @Published var errorMessage: String?
 
     private let profileService: ProfileServiceProtocol
     private let authService: AuthServiceProtocol
+    private let postService: PostServiceProtocol
 
     init(
         profileService: ProfileServiceProtocol,
-        authService: AuthServiceProtocol
+        authService: AuthServiceProtocol,
+        postService: PostServiceProtocol
     ) {
         self.profileService = profileService
         self.authService = authService
+        self.postService = postService
     }
 
     convenience init() {
         self.init(
             profileService: ProfileService(),
-            authService: FirebaseAuthService()
+            authService: FirebaseAuthService(),
+            postService: FirebasePostService()
         )
     }
 
@@ -46,7 +50,25 @@ final class ProfileViewModel: ObservableObject {
         isLoading = false
     }
 
+    func loadUserPosts() async {
+        guard let userId = user?.id else { return }
+
+        isLoadingPosts = true
+
+        do {
+            posts = try await postService.fetchUserPosts(userId: userId, limit: 50, after: nil)
+        } catch {
+            errorMessage = "Failed to load posts: \(error.localizedDescription)"
+        }
+
+        isLoadingPosts = false
+    }
+
     func logout() async throws {
         try await authService.logout()
+    }
+
+    var postCount: Int {
+        posts.count
     }
 }

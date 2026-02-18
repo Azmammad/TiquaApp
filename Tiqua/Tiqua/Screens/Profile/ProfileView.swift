@@ -39,7 +39,10 @@ struct ProfileView: View {
                             .padding(.horizontal, 40)
 
                         Button("Retry") {
-                            Task { await viewModel.loadUser() }
+                            Task {
+                                await viewModel.loadUser()
+                                await viewModel.loadUserPosts()
+                            }
                         }
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.accentColor)
@@ -76,45 +79,9 @@ struct ProfileView: View {
                             }
                             .padding(.horizontal, 24)
 
-                            HStack(spacing: 0) {
-                                VStack(spacing: 4) {
-                                    Text("42")
-                                        .font(.system(size: 20, weight: .bold))
-                                    Text("Posts")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
+                            statsSection
 
-                                Divider()
-                                    .frame(height: 40)
-
-                                VStack(spacing: 4) {
-                                    Text("18")
-                                        .font(.system(size: 20, weight: .bold))
-                                    Text("Saved")
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 16)
-
-                            LazyVGrid(columns: columns, spacing: 2) {
-                                ForEach(0..<9, id: \.self) { _ in
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.2))
-                                        .aspectRatio(1, contentMode: .fit)
-                                        .cornerRadius(4)
-                                        .overlay(
-                                            Image(systemName: "photo")
-                                                .font(.system(size: 30))
-                                                .foregroundColor(.gray.opacity(0.5))
-                                        )
-                                }
-                            }
-                            .padding(.horizontal, 2)
+                            postsSection
 
                             Button {
                                 Task {
@@ -142,6 +109,7 @@ struct ProfileView: View {
                     }
                     .refreshable {
                         await viewModel.loadUser()
+                        await viewModel.loadUserPosts()
                     }
                 }
             }
@@ -159,16 +127,100 @@ struct ProfileView: View {
             }
             .task {
                 await viewModel.loadUser()
+                await viewModel.loadUserPosts()
             }
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView()
             }
             .onChange(of: showEditProfile) { _, newValue in
                 if !newValue {
-                    Task { await viewModel.loadUser() }
+                    Task {
+                        await viewModel.loadUser()
+                        await viewModel.loadUserPosts()
+                    }
                 }
             }
         }
+    }
+
+    private var statsSection: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 4) {
+                Text("\(viewModel.postCount)")
+                    .font(.system(size: 20, weight: .bold))
+                Text("Posts")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider()
+                .frame(height: 40)
+
+            VStack(spacing: 4) {
+                Text("0")
+                    .font(.system(size: 20, weight: .bold))
+                Text("Saved")
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+    }
+
+    @ViewBuilder
+    private var postsSection: some View {
+        if viewModel.isLoadingPosts && viewModel.posts.isEmpty {
+            ProgressView()
+                .padding(.vertical, 40)
+        } else if viewModel.posts.isEmpty {
+            emptyPostsView
+        } else {
+            postsGridView
+        }
+    }
+
+    private var emptyPostsView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "photo.on.rectangle")
+                .font(.system(size: 48))
+                .foregroundColor(.gray.opacity(0.5))
+
+            Text("No posts yet")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.primary)
+
+            Text("Start sharing your moments with the Tiqua world")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.vertical, 40)
+    }
+
+    private var postsGridView: some View {
+        LazyVGrid(columns: columns, spacing: 2) {
+            ForEach(viewModel.posts) { post in
+                KFImage(URL(string: post.imageURL))
+                    .placeholder {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(
+                                ProgressView()
+                                    .tint(.gray)
+                            )
+                    }
+                    .resizable()
+                    .scaledToFill()
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .aspectRatio(1, contentMode: .fit)
+                    .clipped()
+            }
+        }
+        .padding(.horizontal, 2)
     }
 
     @ViewBuilder
