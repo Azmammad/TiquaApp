@@ -16,9 +16,9 @@ struct ProfileView: View {
     @Binding var switchToTab: MainTabView.Tab
 
     private let columns = [
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2)
+        GridItem(.flexible(), spacing: 4),
+        GridItem(.flexible(), spacing: 4),
+        GridItem(.flexible(), spacing: 4)
     ]
 
     var body: some View {
@@ -198,14 +198,14 @@ struct ProfileView: View {
     }
 
     private var postsGridView: some View {
-        LazyVGrid(columns: columns, spacing: 2) {
+        LazyVGrid(columns: columns, spacing: 4) {
             ForEach(viewModel.posts) { post in
                 Color.clear
                     .aspectRatio(1, contentMode: .fit)
                     .overlay(
                         KFImage(URL(string: post.imageURL))
                             .placeholder {
-                                Color.gray.opacity(0.2)
+                                Color.gray.opacity(0.15)
                                     .overlay(
                                         ProgressView()
                                             .tint(.gray)
@@ -216,11 +216,11 @@ struct ProfileView: View {
                             .resizable()
                             .scaledToFill()
                     )
-                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .id(post.id)
             }
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
