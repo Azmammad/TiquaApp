@@ -13,6 +13,7 @@ final class ProfileViewModel: ObservableObject {
     @Published var posts: [Post] = []
     @Published var isLoading: Bool = false
     @Published var isLoadingPosts: Bool = false
+    @Published var hasLoadedPosts: Bool = false
     @Published var errorMessage: String?
 
     private let profileService: ProfileServiceProtocol
@@ -54,13 +55,15 @@ final class ProfileViewModel: ObservableObject {
         guard let userId = user?.id else { return }
 
         isLoadingPosts = true
+        posts = []
 
         do {
             posts = try await postService.fetchUserPosts(userId: userId, limit: 50, after: nil)
         } catch {
-            errorMessage = "Failed to load posts: \(error.localizedDescription)"
+            posts = []
         }
 
+        hasLoadedPosts = true
         isLoadingPosts = false
     }
 
@@ -70,5 +73,9 @@ final class ProfileViewModel: ObservableObject {
 
     var postCount: Int {
         posts.count
+    }
+
+    var isPostsEmpty: Bool {
+        hasLoadedPosts && !isLoadingPosts && posts.isEmpty
     }
 }

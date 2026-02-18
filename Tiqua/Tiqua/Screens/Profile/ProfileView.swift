@@ -13,6 +13,7 @@ struct ProfileView: View {
 
     @StateObject private var viewModel = ProfileViewModel()
     @State private var showEditProfile = false
+    @Binding var switchToTab: MainTabView.Tab
 
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -26,7 +27,7 @@ struct ProfileView: View {
                 if viewModel.isLoading && viewModel.user == nil {
                     ProgressView()
                         .scaleEffect(1.5)
-                } else if let errorMessage = viewModel.errorMessage {
+                } else if let errorMessage = viewModel.errorMessage, viewModel.user == nil {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 50))
@@ -172,31 +173,47 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var postsSection: some View {
-        if viewModel.isLoadingPosts && viewModel.posts.isEmpty {
+        if viewModel.isLoadingPosts && !viewModel.hasLoadedPosts {
             ProgressView()
                 .padding(.vertical, 40)
-        } else if viewModel.posts.isEmpty {
+        } else if viewModel.isPostsEmpty {
             emptyPostsView
-        } else {
+        } else if !viewModel.posts.isEmpty {
             postsGridView
         }
     }
 
     private var emptyPostsView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 48))
-                .foregroundColor(.gray.opacity(0.5))
+        VStack(spacing: 20) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 56))
+                .foregroundColor(.accentColor.opacity(0.4))
 
-            Text("No posts yet")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.primary)
+            VStack(spacing: 8) {
+                Text("No posts yet")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
 
-            Text("Start sharing your moments with the Tiqua world")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                Text("Start sharing your world with Tiqua")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
+
+            Button {
+                switchToTab = .create
+            } label: {
+                Text("Create your first post")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.accentColor)
+                    .cornerRadius(14)
+            }
+            .padding(.horizontal, 48)
+            .padding(.top, 4)
         }
         .padding(.vertical, 40)
     }
@@ -208,16 +225,20 @@ struct ProfileView: View {
                     .placeholder {
                         Rectangle()
                             .fill(Color.gray.opacity(0.2))
+                            .aspectRatio(1, contentMode: .fit)
                             .overlay(
                                 ProgressView()
                                     .tint(.gray)
                             )
                     }
+                    .onFailure { _ in }
+                    .fade(duration: 0.25)
                     .resizable()
                     .scaledToFill()
                     .frame(minWidth: 0, maxWidth: .infinity)
                     .aspectRatio(1, contentMode: .fit)
                     .clipped()
+                    .id(post.id)
             }
         }
         .padding(.horizontal, 2)
