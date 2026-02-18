@@ -17,23 +17,19 @@ final class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let profileService: ProfileServiceProtocol
-    private let authService: AuthServiceProtocol
     private let postService: PostServiceProtocol
 
     init(
         profileService: ProfileServiceProtocol,
-        authService: AuthServiceProtocol,
         postService: PostServiceProtocol
     ) {
         self.profileService = profileService
-        self.authService = authService
         self.postService = postService
     }
 
     convenience init() {
         self.init(
             profileService: ProfileService(),
-            authService: FirebaseAuthService(),
             postService: FirebasePostService()
         )
     }
@@ -65,10 +61,6 @@ final class ProfileViewModel: ObservableObject {
 
         hasLoadedPosts = true
         isLoadingPosts = false
-    }
-
-    func logout() async throws {
-        try await authService.logout()
     }
 
     var postCount: Int {

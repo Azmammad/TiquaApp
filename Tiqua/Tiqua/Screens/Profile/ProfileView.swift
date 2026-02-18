@@ -83,30 +83,8 @@ struct ProfileView: View {
                             statsSection
 
                             postsSection
-
-                            Button {
-                                Task {
-                                    do {
-                                        try await viewModel.logout()
-                                        preferences.isLoggedIn = false
-                                        router.route = .login
-                                    } catch {
-                                        viewModel.errorMessage = "Failed to log out. Please try again."
-                                    }
-                                }
-                            } label: {
-                                Text("Log Out")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.red)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(16)
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.top, 24)
-                            .padding(.bottom, 40)
                         }
+                        .padding(.bottom, 40)
                     }
                     .refreshable {
                         await viewModel.loadUser()
@@ -118,7 +96,8 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    NavigationLink {
+                        SettingsView()
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 20))
