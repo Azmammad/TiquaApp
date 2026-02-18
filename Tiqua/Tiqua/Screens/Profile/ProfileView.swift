@@ -200,22 +200,22 @@ struct ProfileView: View {
     private var postsGridView: some View {
         LazyVGrid(columns: columns, spacing: 2) {
             ForEach(viewModel.posts) { post in
-                KFImage(URL(string: post.imageURL))
-                    .placeholder {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .aspectRatio(1, contentMode: .fit)
-                            .overlay(
-                                ProgressView()
-                                    .tint(.gray)
-                            )
-                    }
-                    .onFailure { _ in }
-                    .fade(duration: 0.25)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(minWidth: 0, maxWidth: .infinity)
+                Color.clear
                     .aspectRatio(1, contentMode: .fit)
+                    .overlay(
+                        KFImage(URL(string: post.imageURL))
+                            .placeholder {
+                                Color.gray.opacity(0.2)
+                                    .overlay(
+                                        ProgressView()
+                                            .tint(.gray)
+                                    )
+                            }
+                            .onFailure { _ in }
+                            .fade(duration: 0.25)
+                            .resizable()
+                            .scaledToFill()
+                    )
                     .clipped()
                     .id(post.id)
             }
