@@ -87,7 +87,7 @@ final class FirebasePostService: PostServiceProtocol {
             query = query.whereField("createdAt", isLessThan: Timestamp(date: after))
         }
 
-        let snapshot = try await query.getDocuments()
+        let snapshot = try await query.getDocuments(source: .server)
         return snapshot.documents.compactMap { parsePost(from: $0) }
     }
 
@@ -101,7 +101,7 @@ final class FirebasePostService: PostServiceProtocol {
             query = query.whereField("createdAt", isLessThan: Timestamp(date: after))
         }
 
-        let snapshot = try await query.getDocuments()
+        let snapshot = try await query.getDocuments(source: .server)
         return snapshot.documents.compactMap { parsePost(from: $0) }
     }
 
