@@ -4,8 +4,6 @@
 //
 //  Created by Əzi Cəbrayılov on 18.02.26.
 //
-
-
 import Foundation
 import Combine
 
@@ -17,19 +15,58 @@ final class CreatePostViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var didCreateSuccessfully: Bool = false
 
-    private let postService: PostServiceProtocol
+    @Published var locationName: String?
+    @Published var locationSubtitle: String?
+    @Published var latitude: Double?
+    @Published var longitude: Double?
 
-    init(postService: PostServiceProtocol) {
+    let locationManager: LocationManager
+    private let postService: PostServiceProtocol
+    private var cancellables = Set<AnyCancellable>()
+
+    init(postService: PostServiceProtocol, locationManager: LocationManager) {
         self.postService = postService
+        self.locationManager = locationManager
+        observeLocation()
     }
 
     convenience init() {
-        self.init(postService: FirebasePostService())
+        self.init(
+            postService: FirebasePostService(),
+            locationManager: LocationManager()
+        )
     }
 
-    func createPost(locationName: String?, latitude: Double?, longitude: Double?) async {
+    private func observeLocation() {
+        locationManager.$latitude
+            .receive(on: RunLoop.main)
+            .assign(to: &$latitude)
+
+        locationManager.$longitude
+            .receive(on: RunLoop.main)
+            .assign(to: &$longitude)
+
+        locationManager.$locationName
+            .receive(on: RunLoop.main)
+            .assign(to: &$locationName)
+
+        locationManager.$locationSubtitle
+            .receive(on: RunLoop.main)
+            .assign(to: &$locationSubtitle)
+    }
+
+    func requestLocation() {
+        locationManager.requestLocation()
+    }
+
+    func createPost() async {
         guard let imageData = selectedImageData else {
             errorMessage = "Please select an image."
+            return
+        }
+
+        guard latitude != nil, longitude != nil else {
+            errorMessage = "Location is required to create a post."
             return
         }
 
@@ -61,5 +98,13 @@ final class CreatePostViewModel: ObservableObject {
         isLoading = false
         errorMessage = nil
         didCreateSuccessfully = false
+    }
+
+    var isLocationAvailable: Bool {
+        latitude != nil && longitude != nil && locationName != nil
+    }
+
+    var postButtonDisabled: Bool {
+        selectedImageData == nil || latitude == nil || longitude == nil || isLoading
     }
 }

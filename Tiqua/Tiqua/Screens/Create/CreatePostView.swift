@@ -15,21 +15,14 @@ struct CreatePostView: View {
     @State private var previewImage: Image?
     @State private var showErrorAlert = false
 
-    var locationName: String? = nil
-    var locationSubtitle: String? = nil
-    var isLocationVerified: Bool = false
-    var latitude: Double? = nil
-    var longitude: Double? = nil
-
     private let captionCharacterLimit = 500
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    if locationName != nil {
-                        locationSection
-                    }
+                    locationSection
+                        .padding(.top, 4)
 
                     photoSection
                         .padding(.horizontal, 20)
@@ -63,28 +56,25 @@ struct CreatePostView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        Task {
-                            await viewModel.createPost(
-                                locationName: locationName,
-                                latitude: latitude,
-                                longitude: longitude
-                            )
-                        }
+                        Task { await viewModel.createPost() }
                     } label: {
                         Text("Post")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(postButtonDisabled ? .secondary : .accentColor)
+                            .foregroundColor(viewModel.postButtonDisabled ? .secondary : .accentColor)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(
-                                postButtonDisabled
+                                viewModel.postButtonDisabled
                                     ? Color(.systemGray5)
                                     : Color.accentColor.opacity(0.12)
                             )
                             .cornerRadius(20)
                     }
-                    .disabled(postButtonDisabled)
+                    .disabled(viewModel.postButtonDisabled)
                 }
+            }
+            .onAppear {
+                viewModel.requestLocation()
             }
             .onChange(of: selectedItem) { _, newValue in
                 if let newValue {
@@ -117,11 +107,35 @@ struct CreatePostView: View {
         }
     }
 
-    private var postButtonDisabled: Bool {
-        viewModel.selectedImageData == nil || viewModel.isLoading
+    @ViewBuilder
+    private var locationSection: some View {
+        if viewModel.locationManager.isLoading {
+            locationLoadingView
+        } else if viewModel.isLocationAvailable {
+            locationVerifiedView
+        } else if viewModel.locationManager.isDenied {
+            locationDeniedView
+        } else {
+            locationRequestView
+        }
     }
 
-    private var locationSection: some View {
+    private var locationLoadingView: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(.accentColor)
+
+            Text("Getting your location...")
+                .font(.system(size: 15))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color(.systemGray6).opacity(0.5))
+    }
+
+    private var locationVerifiedView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.and.ellipse")
@@ -130,18 +144,16 @@ struct CreatePostView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(locationName ?? "")
+                        Text(viewModel.locationName ?? "")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.primary)
 
-                        if isLocationVerified {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.accentColor)
-                        }
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(.accentColor)
                     }
 
-                    if let subtitle = locationSubtitle {
+                    if let subtitle = viewModel.locationSubtitle {
                         Text(subtitle)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
@@ -153,24 +165,83 @@ struct CreatePostView: View {
             .padding(.horizontal, 20)
             .padding(.top, 14)
 
-            if isLocationVerified {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.accentColor)
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
 
-                    Text("Location verified - You're currently at this place")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.accentColor)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 14)
-            } else {
-                Spacer()
-                    .frame(height: 14)
+                Text("Location verified \u{2013} You're currently at this place")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.accentColor)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 14)
         }
         .background(Color.accentColor.opacity(0.06))
+    }
+
+    private var locationDeniedView: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "location.slash.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(.red)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Location Access Denied")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text("Location is required to create posts")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Enable Location in Settings")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.accentColor)
+                    .cornerRadius(12)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color.red.opacity(0.05))
+    }
+
+    private var locationRequestView: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "location.circle")
+                .font(.system(size: 20))
+                .foregroundColor(.secondary)
+
+            Text("Requesting location access...")
+                .font(.system(size: 15))
+                .foregroundColor(.secondary)
+
+            Spacer()
+
+            Button {
+                viewModel.requestLocation()
+            } label: {
+                Text("Retry")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color(.systemGray6).opacity(0.5))
     }
 
     private var photoSection: some View {
