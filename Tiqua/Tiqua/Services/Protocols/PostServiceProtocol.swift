@@ -8,7 +8,7 @@ import Foundation
 
 protocol PostServiceProtocol {
     func createPost(imageData: Data, caption: String?, locationName: String?, latitude: Double?, longitude: Double?) async throws -> Post
-    func fetchPosts(limit: Int, after: Date?) async throws -> [Post]
+    //func fetchPosts(limit: Int, after: Date?) async throws -> [Post]
     func fetchUserPosts(userId: String, limit: Int, after: Date?) async throws -> [Post]
     func deletePost(postId: String, imageURL: String) async throws
 }

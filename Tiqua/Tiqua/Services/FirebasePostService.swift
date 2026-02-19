@@ -10,85 +10,63 @@ import FirebaseFirestore
 import FirebaseStorage
 
 final class FirebasePostService: PostServiceProtocol {
+
     private let db = Firestore.firestore()
     private let storage = Storage.storage()
-    private let authService: AuthServiceProtocol
 
-    init(authService: AuthServiceProtocol = FirebaseAuthService()) {
-        self.authService = authService
-    }
-
-    func createPost(imageData: Data, caption: String?, locationName: String?, latitude: Double?, longitude: Double?) async throws -> Post {
-        guard let currentUser = try await authService.getCurrentUser() else {
-            throw NSError(
-                domain: "FirebasePostService",
-                code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "No authenticated user found"]
-            )
+    func createPost(
+        imageData: Data,
+        caption: String?,
+        locationName: String?,
+        latitude: Double?,
+        longitude: Double?
+    ) async throws -> Post {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "FirebasePostService", code: 401,
+                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
         }
 
-        let postId = db.collection("posts").document().documentID
-        let storageRef = storage.reference().child("post_images/\(currentUser.id)/\(postId).jpg")
+        let userDoc = try await db.collection("users").document(uid).getDocument()
+        guard let username = userDoc.data()?["username"] as? String else {
+            throw NSError(domain: "FirebasePostService", code: 404,
+                          userInfo: [NSLocalizedDescriptionKey: "Username not found."])
+        }
+
+        let postId = UUID().uuidString
+        let storageRef = storage.reference().child("posts/\(uid)/\(postId).jpg")
 
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
         _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
         let downloadURL = try await storageRef.downloadURL()
-        let imageURL = downloadURL.absoluteString
 
         let now = Date()
-
-        var postData: [String: Any] = [
+        let data: [String: Any] = [
             "id": postId,
-            "ownerId": currentUser.id,
-            "username": currentUser.username,
-            "imageURL": imageURL,
+            "ownerId": uid,
+            "username": username,
+            "imageURL": downloadURL.absoluteString,
+            "caption": caption as Any,
+            "locationName": locationName as Any,
+            "latitude": latitude as Any,
+            "longitude": longitude as Any,
             "createdAt": Timestamp(date: now)
         ]
 
-        if let caption = caption?.trimmingCharacters(in: .whitespacesAndNewlines), !caption.isEmpty {
-            postData["caption"] = caption
-        }
-
-        if let locationName = locationName?.trimmingCharacters(in: .whitespacesAndNewlines), !locationName.isEmpty {
-            postData["locationName"] = locationName
-        }
-
-        if let latitude = latitude {
-            postData["latitude"] = latitude
-        }
-
-        if let longitude = longitude {
-            postData["longitude"] = longitude
-        }
-
-        try await db.collection("posts").document(postId).setData(postData)
+        try await db.collection("posts").document(postId).setData(data)
 
         return Post(
             id: postId,
-            ownerId: currentUser.id,
-            username: currentUser.username,
-            imageURL: imageURL,
+            ownerId: uid,
+            username: username,
+            imageURL: downloadURL.absoluteString,
             caption: caption,
             locationName: locationName,
             latitude: latitude,
             longitude: longitude,
             createdAt: now
         )
-    }
-
-    func fetchPosts(limit: Int, after: Date?) async throws -> [Post] {
-        var query: Query = db.collection("posts")
-            .order(by: "createdAt", descending: true)
-            .limit(to: limit)
-
-        if let after = after {
-            query = query.whereField("createdAt", isLessThan: Timestamp(date: after))
-        }
-
-        let snapshot = try await query.getDocuments(source: .server)
-        return snapshot.documents.compactMap { parsePost(from: $0) }
     }
 
     func fetchUserPosts(userId: String, limit: Int, after: Date?) async throws -> [Post] {
@@ -98,54 +76,33 @@ final class FirebasePostService: PostServiceProtocol {
             .limit(to: limit)
 
         if let after = after {
-            query = query.whereField("createdAt", isLessThan: Timestamp(date: after))
+            query = query.start(after: [Timestamp(date: after)])
         }
 
-        let snapshot = try await query.getDocuments(source: .server)
-        return snapshot.documents.compactMap { parsePost(from: $0) }
+        let snapshot = try await query.getDocuments()
+        return snapshot.documents.compactMap { decode(document: $0) }
     }
 
-    func deletePost(_ postId: String) async throws {
-        guard let currentUser = try await authService.getCurrentUser() else {
-            throw NSError(
-                domain: "FirebasePostService",
-                code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "No authenticated user found"]
-            )
-        }
-
-        let postDoc = try await db.collection("posts").document(postId).getDocument()
-
-        guard let data = postDoc.data(),
-              let ownerId = data["ownerId"] as? String,
-              ownerId == currentUser.id else {
-            throw NSError(
-                domain: "FirebasePostService",
-                code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "You can only delete your own posts"]
-            )
-        }
-
-        let storageRef = storage.reference().child("post_images/\(currentUser.id)/\(postId).jpg")
-
-        do {
-            try await storageRef.delete()
-        } catch {
-        }
-
+    func deletePost(postId: String, imageURL: String) async throws {
         try await db.collection("posts").document(postId).delete()
+
+        if let url = URL(string: imageURL),
+           url.host?.contains("firebasestorage") == true {
+            let storageRef = storage.reference(forURL: imageURL)
+            try await storageRef.delete()
+        }
     }
 
-    private func parsePost(from document: DocumentSnapshot) -> Post? {
-        guard let data = document.data(),
-              let id = data["id"] as? String,
-              let ownerId = data["ownerId"] as? String,
-              let username = data["username"] as? String,
-              let imageURL = data["imageURL"] as? String,
-              let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
-        else {
-            return nil
-        }
+    private func decode(document: QueryDocumentSnapshot) -> Post? {
+        let data = document.data()
+
+        guard
+            let id = data["id"] as? String,
+            let ownerId = data["ownerId"] as? String,
+            let username = data["username"] as? String,
+            let imageURL = data["imageURL"] as? String,
+            let timestamp = data["createdAt"] as? Timestamp
+        else { return nil }
 
         return Post(
             id: id,
@@ -156,7 +113,7 @@ final class FirebasePostService: PostServiceProtocol {
             locationName: data["locationName"] as? String,
             latitude: data["latitude"] as? Double,
             longitude: data["longitude"] as? Double,
-            createdAt: createdAt
+            createdAt: timestamp.dateValue()
         )
     }
 }
