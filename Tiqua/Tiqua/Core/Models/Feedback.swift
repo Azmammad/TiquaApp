@@ -4,8 +4,6 @@
 //
 //  Created by Əzi Cəbrayılov on 19.02.26.
 //
-
-
 import Foundation
 
 struct Feedback: Codable, Identifiable {
@@ -17,4 +15,5 @@ struct Feedback: Codable, Identifiable {
     let text: String
     let isLocationVerified: Bool
     let createdAt: Date
+    var verificationType: String?
 }
