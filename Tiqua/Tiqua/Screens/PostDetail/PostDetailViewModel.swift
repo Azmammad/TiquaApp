@@ -4,11 +4,10 @@
 //
 //  Created by Əzi Cəbrayılov on 19.02.26.
 //
-
-
 import Foundation
 import Combine
 import CoreLocation
+import FirebaseAuth
 
 @MainActor
 final class PostDetailViewModel: ObservableObject {
@@ -19,27 +18,37 @@ final class PostDetailViewModel: ObservableObject {
     @Published var isLiked: Bool = false
     @Published var likeCount: Int = 0
     @Published var isLoading: Bool = false
+    @Published var isDeleting: Bool = false
     @Published var isSendingComment: Bool = false
     @Published var isSendingFeedback: Bool = false
     @Published var commentText: String = ""
     @Published var feedbackText: String = ""
     @Published var errorMessage: String?
     @Published var isNearLocation: Bool = false
+    @Published var didDeletePost: Bool = false
 
     private let interactionService: PostInteractionServiceProtocol
     private let profileService: ProfileServiceProtocol
+    private let postService: PostServiceProtocol
     private let locationManager: LocationManager
     private let maxFeedbackDistance: Double = 500
+
+    var isOwner: Bool {
+        guard let uid = Auth.auth().currentUser?.uid else { return false }
+        return post.ownerId == uid
+    }
 
     init(
         post: Post,
         interactionService: PostInteractionServiceProtocol,
         profileService: ProfileServiceProtocol,
+        postService: PostServiceProtocol,
         locationManager: LocationManager
     ) {
         self.post = post
         self.interactionService = interactionService
         self.profileService = profileService
+        self.postService = postService
         self.locationManager = locationManager
     }
 
@@ -48,6 +57,7 @@ final class PostDetailViewModel: ObservableObject {
             post: post,
             interactionService: FirebasePostInteractionService(),
             profileService: ProfileService(),
+            postService: FirebasePostService(),
             locationManager: LocationManager()
         )
     }
@@ -121,6 +131,17 @@ final class PostDetailViewModel: ObservableObject {
         } catch {
             errorMessage = "Failed to update like"
         }
+    }
+
+    func deletePost() async {
+        isDeleting = true
+        do {
+            try await postService.deletePost(postId: post.id, imageURL: post.imageURL)
+            didDeletePost = true
+        } catch {
+            errorMessage = "Failed to delete post. Please try again."
+        }
+        isDeleting = false
     }
 
     private func loadLikeState() async {

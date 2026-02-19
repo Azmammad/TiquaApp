@@ -11,6 +11,9 @@ struct PostDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: PostDetailViewModel
 
+    @State private var showDeleteConfirmation = false
+    @State private var showErrorAlert = false
+
     init(post: Post) {
         _viewModel = StateObject(wrappedValue: PostDetailViewModel(post: post))
     }
@@ -63,13 +66,47 @@ struct PostDetailView: View {
                         .foregroundColor(.primary)
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {} label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20))
-                        .foregroundColor(.primary)
+
+            if viewModel.isOwner {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        if viewModel.isDeleting {
+                            ProgressView()
+                                .tint(.primary)
+                        } else {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 20))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                    .disabled(viewModel.isDeleting)
                 }
             }
+        }
+        .confirmationDialog(
+            "Are you sure you want to delete this post?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Post", role: .destructive) {
+                Task { await viewModel.deletePost() }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .onChange(of: viewModel.didDeletePost) { _, newValue in
+            if newValue { dismiss() }
+        }
+        .onChange(of: viewModel.errorMessage) { _, newValue in
+            showErrorAlert = newValue != nil
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
         .task {
             await viewModel.loadAll()
