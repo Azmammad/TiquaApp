@@ -181,12 +181,16 @@ struct PostDetailView: View {
                     Image(systemName: viewModel.isLiked ? "heart.fill" : "heart")
                         .font(.system(size: 24))
                         .foregroundColor(viewModel.isLiked ? .red : .primary)
+                        .animation(.easeInOut(duration: 0.15), value: viewModel.isLiked)
                 }
+                .disabled(viewModel.isTogglingLike)
 
                 if viewModel.likeCount > 0 {
                     Text("\(viewModel.likeCount)")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary)
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.likeCount)
                 }
             }
 
@@ -319,7 +323,12 @@ struct PostDetailView: View {
         }
     }
 
-    private func inputRow(text: Binding<String>, placeholder: String, isSending: Bool, action: @escaping () -> Void) -> some View {
+    private func inputRow(
+        text: Binding<String>,
+        placeholder: String,
+        isSending: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
         HStack(spacing: 10) {
             TextField(placeholder, text: text)
                 .font(.system(size: 15))
@@ -346,7 +355,9 @@ struct PostDetailView: View {
                         .clipShape(Circle())
                 }
             }
-            .disabled(text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+            .disabled(
+                text.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending
+            )
         }
     }
 

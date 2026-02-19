@@ -19,6 +19,7 @@ final class PostDetailViewModel: ObservableObject {
     @Published var likeCount: Int = 0
     @Published var isLoading: Bool = false
     @Published var isDeleting: Bool = false
+    @Published var isTogglingLike: Bool = false
     @Published var isSendingComment: Bool = false
     @Published var isSendingFeedback: Bool = false
     @Published var commentText: String = ""
@@ -36,6 +37,10 @@ final class PostDetailViewModel: ObservableObject {
     var isOwner: Bool {
         guard let uid = Auth.auth().currentUser?.uid else { return false }
         return post.ownerId == uid
+    }
+
+    private var currentUserId: String? {
+        Auth.auth().currentUser?.uid
     }
 
     init(
@@ -89,6 +94,50 @@ final class PostDetailViewModel: ObservableObject {
         }
     }
 
+    func loadLikeState() async {
+        guard let uid = currentUserId else {
+            isLiked = false
+            likeCount = 0
+            return
+        }
+
+        do {
+            async let liked = interactionService.checkIfLiked(postId: post.id, userId: uid)
+            async let count = interactionService.fetchLikeCount(postId: post.id)
+            isLiked = try await liked
+            likeCount = try await count
+        } catch {
+            isLiked = false
+            likeCount = 0
+        }
+    }
+
+    func toggleLike() async {
+        guard let uid = currentUserId, !isTogglingLike else { return }
+
+        isTogglingLike = true
+
+        let previousLiked = isLiked
+        let previousCount = likeCount
+
+        isLiked = !previousLiked
+        likeCount = previousLiked ? max(0, previousCount - 1) : previousCount + 1
+
+        do {
+            if previousLiked {
+                try await interactionService.unlikePost(postId: post.id, userId: uid)
+            } else {
+                try await interactionService.likePost(postId: post.id, userId: uid)
+            }
+        } catch {
+            isLiked = previousLiked
+            likeCount = previousCount
+            errorMessage = "Failed to update like. Please try again."
+        }
+
+        isTogglingLike = false
+    }
+
     func sendComment() async {
         let trimmed = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -123,16 +172,6 @@ final class PostDetailViewModel: ObservableObject {
         isSendingFeedback = false
     }
 
-    func toggleLike() async {
-        do {
-            let newState = try await interactionService.toggleLike(postId: post.id)
-            isLiked = newState
-            likeCount += newState ? 1 : -1
-        } catch {
-            errorMessage = "Failed to update like"
-        }
-    }
-
     func deletePost() async {
         isDeleting = true
         do {
@@ -142,15 +181,6 @@ final class PostDetailViewModel: ObservableObject {
             errorMessage = "Failed to delete post. Please try again."
         }
         isDeleting = false
-    }
-
-    private func loadLikeState() async {
-        do {
-            async let liked = interactionService.isLiked(postId: post.id)
-            async let count = interactionService.likeCount(postId: post.id)
-            isLiked = try await liked
-            likeCount = try await count
-        } catch {}
     }
 
     private func loadOwnerProfile() async {
