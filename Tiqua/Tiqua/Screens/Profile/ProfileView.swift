@@ -200,27 +200,29 @@ struct ProfileView: View {
     private var postsGridView: some View {
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(viewModel.posts) { post in
-                Color.clear
-                    .aspectRatio(1, contentMode: .fit)
-                    .overlay(
-                        KFImage(URL(string: post.imageURL))
-                            .placeholder {
-                                Color.gray.opacity(0.15)
-                                    .overlay(
-                                        ProgressView()
-                                            .tint(.gray)
-                                    )
-                            }
-                            .onFailure { _ in }
-                            .fade(duration: 0.25)
-                            .resizable()
-                            .scaledToFill()
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .id(post.id)
+                NavigationLink(destination: PostDetailView(post: post)) {
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay(
+                            KFImage(URL(string: post.imageURL))
+                                .placeholder {
+                                    Color.gray.opacity(0.15)
+                                        .overlay(
+                                            ProgressView()
+                                                .tint(.gray)
+                                        )
+                                }
+                                .onFailure { _ in }
+                                .fade(duration: 0.25)
+                                .resizable()
+                                .scaledToFill()
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .id(post.id)
+                }
             }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 8)
     }
 
     @ViewBuilder
