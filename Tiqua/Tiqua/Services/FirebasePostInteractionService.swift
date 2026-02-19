@@ -4,169 +4,209 @@
 //
 //  Created by Əzi Cəbrayılov on 19.02.26.
 //
-
-
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
 final class FirebasePostInteractionService: PostInteractionServiceProtocol {
-    private let db = Firestore.firestore()
-    private let authService: AuthServiceProtocol
 
-    init(authService: AuthServiceProtocol = FirebaseAuthService()) {
-        self.authService = authService
-    }
+    private let db = Firestore.firestore()
 
     func fetchComments(postId: String) async throws -> [Comment] {
-        let snapshot = try await db.collection("posts").document(postId)
+        let snapshot = try await db
+            .collection("posts")
+            .document(postId)
             .collection("comments")
             .order(by: "createdAt", descending: false)
-            .getDocuments(source: .server)
+            .getDocuments()
 
-        return snapshot.documents.compactMap { doc in
-            let data = doc.data()
-            guard let id = data["id"] as? String,
-                  let postId = data["postId"] as? String,
-                  let userId = data["userId"] as? String,
-                  let username = data["username"] as? String,
-                  let text = data["text"] as? String,
-                  let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
-            else { return nil }
-
-            return Comment(
-                id: id,
-                postId: postId,
-                userId: userId,
-                username: username,
-                profileImageURL: data["profileImageURL"] as? String,
-                text: text,
-                createdAt: createdAt
-            )
-        }
+        return snapshot.documents.compactMap { decodeComment($0) }
     }
 
     func addComment(postId: String, text: String) async throws -> Comment {
-        guard let user = try await authService.getCurrentUser() else {
-            throw NSError(domain: "PostInteraction", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        guard let uid = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "FirebasePostInteractionService", code: 401,
+                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
         }
 
-        let ref = db.collection("posts").document(postId).collection("comments").document()
+        let userDoc = try await db.collection("users").document(uid).getDocument()
+        let username = userDoc.data()?["username"] as? String ?? "Unknown"
+        let profileImageURL = userDoc.data()?["profileImageURL"] as? String
+
+        let commentId = UUID().uuidString
         let now = Date()
 
-        let commentData: [String: Any] = [
-            "id": ref.documentID,
+        let data: [String: Any] = [
+            "id": commentId,
             "postId": postId,
-            "userId": user.id,
-            "username": user.username,
-            "profileImageURL": user.profileImageURL ?? "",
+            "userId": uid,
+            "username": username,
+            "profileImageURL": profileImageURL as Any,
             "text": text,
             "createdAt": Timestamp(date: now)
         ]
 
-        try await ref.setData(commentData)
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("comments")
+            .document(commentId)
+            .setData(data)
 
         return Comment(
-            id: ref.documentID,
+            id: commentId,
             postId: postId,
-            userId: user.id,
-            username: user.username,
-            profileImageURL: user.profileImageURL,
+            userId: uid,
+            username: username,
+            profileImageURL: profileImageURL,
             text: text,
             createdAt: now
         )
     }
 
     func fetchFeedback(postId: String) async throws -> [Feedback] {
-        let snapshot = try await db.collection("posts").document(postId)
+        let snapshot = try await db
+            .collection("posts")
+            .document(postId)
             .collection("feedback")
             .order(by: "createdAt", descending: false)
-            .getDocuments(source: .server)
+            .getDocuments()
 
-        return snapshot.documents.compactMap { doc in
-            let data = doc.data()
-            guard let id = data["id"] as? String,
-                  let postId = data["postId"] as? String,
-                  let userId = data["userId"] as? String,
-                  let username = data["username"] as? String,
-                  let text = data["text"] as? String,
-                  let isLocationVerified = data["isLocationVerified"] as? Bool,
-                  let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
-            else { return nil }
-
-            return Feedback(
-                id: id,
-                postId: postId,
-                userId: userId,
-                username: username,
-                profileImageURL: data["profileImageURL"] as? String,
-                text: text,
-                isLocationVerified: isLocationVerified,
-                createdAt: createdAt
-            )
-        }
+        return snapshot.documents.compactMap { decodeFeedback($0) }
     }
 
     func addFeedback(postId: String, text: String, latitude: Double, longitude: Double) async throws -> Feedback {
-        guard let user = try await authService.getCurrentUser() else {
-            throw NSError(domain: "PostInteraction", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        guard let uid = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "FirebasePostInteractionService", code: 401,
+                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
         }
 
-        let ref = db.collection("posts").document(postId).collection("feedback").document()
+        let userDoc = try await db.collection("users").document(uid).getDocument()
+        let username = userDoc.data()?["username"] as? String ?? "Unknown"
+        let profileImageURL = userDoc.data()?["profileImageURL"] as? String
+
+        let feedbackId = UUID().uuidString
         let now = Date()
 
-        let feedbackData: [String: Any] = [
-            "id": ref.documentID,
+        let data: [String: Any] = [
+            "id": feedbackId,
             "postId": postId,
-            "userId": user.id,
-            "username": user.username,
-            "profileImageURL": user.profileImageURL ?? "",
+            "userId": uid,
+            "username": username,
+            "profileImageURL": profileImageURL as Any,
             "text": text,
             "isLocationVerified": true,
-            "latitude": latitude,
-            "longitude": longitude,
             "createdAt": Timestamp(date: now)
         ]
 
-        try await ref.setData(feedbackData)
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("feedback")
+            .document(feedbackId)
+            .setData(data)
 
         return Feedback(
-            id: ref.documentID,
+            id: feedbackId,
             postId: postId,
-            userId: user.id,
-            username: user.username,
-            profileImageURL: user.profileImageURL,
+            userId: uid,
+            username: username,
+            profileImageURL: profileImageURL,
             text: text,
             isLocationVerified: true,
             createdAt: now
         )
     }
 
-    func toggleLike(postId: String) async throws -> Bool {
-        guard let user = try await authService.getCurrentUser() else {
-            throw NSError(domain: "PostInteraction", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
-        }
+    func checkIfLiked(postId: String, userId: String) async throws -> Bool {
+        let doc = try await db
+            .collection("posts")
+            .document(postId)
+            .collection("likes")
+            .document(userId)
+            .getDocument()
 
-        let likeRef = db.collection("posts").document(postId).collection("likes").document(user.id)
-        let doc = try await likeRef.getDocument()
-
-        if doc.exists {
-            try await likeRef.delete()
-            return false
-        } else {
-            try await likeRef.setData(["userId": user.id, "createdAt": Timestamp(date: Date())])
-            return true
-        }
-    }
-
-    func isLiked(postId: String) async throws -> Bool {
-        guard let user = try await authService.getCurrentUser() else { return false }
-        let doc = try await db.collection("posts").document(postId).collection("likes").document(user.id).getDocument()
         return doc.exists
     }
 
-    func likeCount(postId: String) async throws -> Int {
-        let snapshot = try await db.collection("posts").document(postId).collection("likes").getDocuments(source: .server)
+    func likePost(postId: String, userId: String) async throws {
+        let data: [String: Any] = [
+            "userId": userId,
+            "createdAt": Timestamp(date: Date())
+        ]
+
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("likes")
+            .document(userId)
+            .setData(data)
+    }
+
+    func unlikePost(postId: String, userId: String) async throws {
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("likes")
+            .document(userId)
+            .delete()
+    }
+
+    func fetchLikeCount(postId: String) async throws -> Int {
+        let snapshot = try await db
+            .collection("posts")
+            .document(postId)
+            .collection("likes")
+            .getDocuments()
+
         return snapshot.documents.count
+    }
+
+    private func decodeComment(_ document: QueryDocumentSnapshot) -> Comment? {
+        let data = document.data()
+
+        guard
+            let id = data["id"] as? String,
+            let postId = data["postId"] as? String,
+            let userId = data["userId"] as? String,
+            let username = data["username"] as? String,
+            let text = data["text"] as? String,
+            let timestamp = data["createdAt"] as? Timestamp
+        else { return nil }
+
+        return Comment(
+            id: id,
+            postId: postId,
+            userId: userId,
+            username: username,
+            profileImageURL: data["profileImageURL"] as? String,
+            text: text,
+            createdAt: timestamp.dateValue()
+        )
+    }
+
+    private func decodeFeedback(_ document: QueryDocumentSnapshot) -> Feedback? {
+        let data = document.data()
+
+        guard
+            let id = data["id"] as? String,
+            let postId = data["postId"] as? String,
+            let userId = data["userId"] as? String,
+            let username = data["username"] as? String,
+            let text = data["text"] as? String,
+            let isLocationVerified = data["isLocationVerified"] as? Bool,
+            let timestamp = data["createdAt"] as? Timestamp
+        else { return nil }
+
+        return Feedback(
+            id: id,
+            postId: postId,
+            userId: userId,
+            username: username,
+            profileImageURL: data["profileImageURL"] as? String,
+            text: text,
+            isLocationVerified: isLocationVerified,
+            createdAt: timestamp.dateValue()
+        )
     }
 }
