@@ -272,13 +272,25 @@ struct PostDetailView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
 
-            if viewModel.isNearLocation {
+            if viewModel.canLeaveFeedback {
                 inputRow(
                     text: $viewModel.feedbackText,
                     placeholder: "Share your experience here...",
                     isSending: viewModel.isSendingFeedback
                 ) {
                     Task { await viewModel.addFeedback(text: viewModel.feedbackText) }
+                }
+
+                if let verificationType = viewModel.feedbackVerificationType {
+                    HStack(spacing: 6) {
+                        Image(systemName: verificationType == "gps" ? "location.fill" : "clock.arrow.circlepath")
+                            .font(.system(size: 12))
+                            .foregroundColor(.accentColor)
+
+                        Text(verificationType == "gps" ? "Verified by GPS" : "Verified by visit history")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.accentColor)
+                    }
                 }
             } else {
                 HStack(spacing: 8) {
@@ -418,6 +430,12 @@ struct PostDetailView: View {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 12))
                             .foregroundColor(.accentColor)
+                    }
+
+                    if let verificationType = item.verificationType {
+                        Image(systemName: verificationType == "gps" ? "location.fill" : "clock.arrow.circlepath")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                 }
 

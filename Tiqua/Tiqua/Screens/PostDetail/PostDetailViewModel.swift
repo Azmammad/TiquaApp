@@ -8,6 +8,7 @@ import Foundation
 import Combine
 import CoreLocation
 import FirebaseAuth
+import FirebaseFirestore
 
 @MainActor
 final class PostDetailViewModel: ObservableObject {
@@ -30,12 +31,15 @@ final class PostDetailViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isNearLocation: Bool = false
     @Published var didDeletePost: Bool = false
+    @Published var canLeaveFeedback: Bool = false
+    @Published var feedbackVerificationType: String?
 
     private let interactionService: PostInteractionServiceProtocol
     private let profileService: ProfileServiceProtocol
     private let postService: PostServiceProtocol
     private let locationManager: LocationManager
-    private let maxFeedbackDistance: Double = 500
+    private let db = Firestore.firestore()
+    private let maxFeedbackDistance: Double = 300
 
     var isOwner: Bool {
         guard let uid = Auth.auth().currentUser?.uid else { return false }
@@ -77,8 +81,8 @@ final class PostDetailViewModel: ObservableObject {
         async let likeTask: () = loadLikeState()
         async let savedTask: () = loadSavedState()
         async let ownerTask: () = loadOwnerProfile()
-        _ = await (commentsTask, feedbackTask, likeTask, savedTask, ownerTask)
-        checkLocationProximity()
+        async let permissionTask: () = checkFeedbackPermission()
+        _ = await (commentsTask, feedbackTask, likeTask, savedTask, ownerTask, permissionTask)
         isLoading = false
     }
 
@@ -98,6 +102,51 @@ final class PostDetailViewModel: ObservableObject {
             feedbacks = []
         }
         isFeedbackLoading = false
+    }
+
+    func checkFeedbackPermission() async {
+        canLeaveFeedback = false
+        feedbackVerificationType = nil
+
+        guard post.latitude != nil, post.longitude != nil else { return }
+
+        locationManager.requestLocation()
+
+        if let userLat = locationManager.latitude,
+           let userLng = locationManager.longitude,
+           let postLat = post.latitude,
+           let postLng = post.longitude {
+            let userLocation = CLLocation(latitude: userLat, longitude: userLng)
+            let postLocation = CLLocation(latitude: postLat, longitude: postLng)
+            let distance = userLocation.distance(from: postLocation)
+
+            if distance <= maxFeedbackDistance {
+                canLeaveFeedback = true
+                feedbackVerificationType = "gps"
+                isNearLocation = true
+                return
+            }
+        }
+
+        guard let uid = currentUserId,
+              let postCity = extractCity(from: post.locationName) else {
+            canLeaveFeedback = false
+            return
+        }
+
+        do {
+            let userDoc = try await db.collection("users").document(uid).getDocument()
+            let visitedCities = userDoc.data()?["visitedCities"] as? [String] ?? []
+
+            if visitedCities.contains(postCity) {
+                canLeaveFeedback = true
+                feedbackVerificationType = "historical"
+            } else {
+                canLeaveFeedback = false
+            }
+        } catch {
+            canLeaveFeedback = false
+        }
     }
 
     func loadLikeState() async {
@@ -196,7 +245,7 @@ final class PostDetailViewModel: ObservableObject {
 
     func addFeedback(text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty, canLeaveFeedback else { return }
         guard let lat = locationManager.latitude, let lng = locationManager.longitude else {
             errorMessage = "Location not available"
             return
@@ -204,12 +253,13 @@ final class PostDetailViewModel: ObservableObject {
 
         isSendingFeedback = true
         do {
-            let fb = try await interactionService.addFeedback(
+            var fb = try await interactionService.addFeedback(
                 postId: post.id,
                 text: trimmed,
                 latitude: lat,
                 longitude: lng
             )
+            fb.verificationType = feedbackVerificationType
             feedbacks.append(fb)
             feedbackText = ""
         } catch {
@@ -242,20 +292,13 @@ final class PostDetailViewModel: ObservableObject {
         } catch {}
     }
 
-    func checkLocationProximity() {
-        locationManager.requestLocation()
-        guard let userLat = locationManager.latitude,
-              let userLng = locationManager.longitude,
-              let postLat = post.latitude,
-              let postLng = post.longitude else {
-            isNearLocation = false
-            return
+    private func extractCity(from locationName: String?) -> String? {
+        guard let locationName = locationName, !locationName.isEmpty else { return nil }
+        let components = locationName.components(separatedBy: ",")
+        if components.count >= 2 {
+            return components[components.count - 2].trimmingCharacters(in: .whitespacesAndNewlines)
         }
-
-        let userLocation = CLLocation(latitude: userLat, longitude: userLng)
-        let postLocation = CLLocation(latitude: postLat, longitude: postLng)
-        let distance = userLocation.distance(from: postLocation)
-        isNearLocation = distance <= maxFeedbackDistance
+        return locationName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func timeAgoString(from date: Date) -> String {

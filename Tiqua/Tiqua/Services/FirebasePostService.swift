@@ -56,6 +56,15 @@ final class FirebasePostService: PostServiceProtocol {
 
         try await db.collection("posts").document(postId).setData(data)
 
+        if let locationName = locationName, !locationName.isEmpty {
+            let cityName = extractCity(from: locationName)
+            if !cityName.isEmpty {
+                try await db.collection("users").document(uid).updateData([
+                    "visitedCities": FieldValue.arrayUnion([cityName])
+                ])
+            }
+        }
+
         return Post(
             id: postId,
             ownerId: uid,
@@ -91,6 +100,14 @@ final class FirebasePostService: PostServiceProtocol {
             let storageRef = storage.reference(forURL: imageURL)
             try await storageRef.delete()
         }
+    }
+
+    private func extractCity(from locationName: String) -> String {
+        let components = locationName.components(separatedBy: ",")
+        if components.count >= 2 {
+            return components[components.count - 2].trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return locationName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func decode(document: QueryDocumentSnapshot) -> Post? {
