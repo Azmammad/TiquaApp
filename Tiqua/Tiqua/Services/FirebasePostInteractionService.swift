@@ -162,6 +162,40 @@ final class FirebasePostInteractionService: PostInteractionServiceProtocol {
         return snapshot.documents.count
     }
 
+    func savePost(postId: String, userId: String) async throws {
+        let data: [String: Any] = [
+            "postId": postId,
+            "savedAt": Timestamp(date: Date())
+        ]
+
+        try await db
+            .collection("users")
+            .document(userId)
+            .collection("savedPosts")
+            .document(postId)
+            .setData(data)
+    }
+
+    func unsavePost(postId: String, userId: String) async throws {
+        try await db
+            .collection("users")
+            .document(userId)
+            .collection("savedPosts")
+            .document(postId)
+            .delete()
+    }
+
+    func isPostSaved(postId: String, userId: String) async throws -> Bool {
+        let doc = try await db
+            .collection("users")
+            .document(userId)
+            .collection("savedPosts")
+            .document(postId)
+            .getDocument()
+
+        return doc.exists
+    }
+
     private func decodeComment(_ document: QueryDocumentSnapshot) -> Comment? {
         let data = document.data()
 

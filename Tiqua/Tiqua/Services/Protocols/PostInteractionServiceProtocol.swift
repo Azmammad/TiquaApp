@@ -15,4 +15,7 @@ protocol PostInteractionServiceProtocol {
     func likePost(postId: String, userId: String) async throws
     func unlikePost(postId: String, userId: String) async throws
     func fetchLikeCount(postId: String) async throws -> Int
+    func savePost(postId: String, userId: String) async throws
+    func unsavePost(postId: String, userId: String) async throws
+    func isPostSaved(postId: String, userId: String) async throws -> Bool
 }

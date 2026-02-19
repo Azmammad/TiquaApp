@@ -14,10 +14,13 @@ final class PostDetailViewModel: ObservableObject {
     @Published var post: Post
     @Published var ownerProfileImageURL: String?
     @Published var comments: [Comment] = []
-    @Published var feedback: [Feedback] = []
+    @Published var feedbacks: [Feedback] = []
     @Published var isLiked: Bool = false
     @Published var likeCount: Int = 0
+    @Published var isSaved: Bool = false
+    @Published var isSaveLoading: Bool = false
     @Published var isLoading: Bool = false
+    @Published var isFeedbackLoading: Bool = false
     @Published var isDeleting: Bool = false
     @Published var isTogglingLike: Bool = false
     @Published var isSendingComment: Bool = false
@@ -72,8 +75,9 @@ final class PostDetailViewModel: ObservableObject {
         async let commentsTask: () = loadComments()
         async let feedbackTask: () = loadFeedback()
         async let likeTask: () = loadLikeState()
+        async let savedTask: () = loadSavedState()
         async let ownerTask: () = loadOwnerProfile()
-        _ = await (commentsTask, feedbackTask, likeTask, ownerTask)
+        _ = await (commentsTask, feedbackTask, likeTask, savedTask, ownerTask)
         checkLocationProximity()
         isLoading = false
     }
@@ -87,11 +91,13 @@ final class PostDetailViewModel: ObservableObject {
     }
 
     func loadFeedback() async {
+        isFeedbackLoading = true
         do {
-            feedback = try await interactionService.fetchFeedback(postId: post.id)
+            feedbacks = try await interactionService.fetchFeedback(postId: post.id)
         } catch {
-            feedback = []
+            feedbacks = []
         }
+        isFeedbackLoading = false
     }
 
     func loadLikeState() async {
@@ -109,6 +115,19 @@ final class PostDetailViewModel: ObservableObject {
         } catch {
             isLiked = false
             likeCount = 0
+        }
+    }
+
+    func loadSavedState() async {
+        guard let uid = currentUserId else {
+            isSaved = false
+            return
+        }
+
+        do {
+            isSaved = try await interactionService.isPostSaved(postId: post.id, userId: uid)
+        } catch {
+            isSaved = false
         }
     }
 
@@ -138,6 +157,28 @@ final class PostDetailViewModel: ObservableObject {
         isTogglingLike = false
     }
 
+    func toggleSave() async {
+        guard let uid = currentUserId, !isSaveLoading else { return }
+
+        isSaveLoading = true
+
+        let previousSaved = isSaved
+        isSaved = !previousSaved
+
+        do {
+            if previousSaved {
+                try await interactionService.unsavePost(postId: post.id, userId: uid)
+            } else {
+                try await interactionService.savePost(postId: post.id, userId: uid)
+            }
+        } catch {
+            isSaved = previousSaved
+            errorMessage = "Failed to update saved state. Please try again."
+        }
+
+        isSaveLoading = false
+    }
+
     func sendComment() async {
         let trimmed = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -153,8 +194,8 @@ final class PostDetailViewModel: ObservableObject {
         isSendingComment = false
     }
 
-    func sendFeedback() async {
-        let trimmed = feedbackText.trimmingCharacters(in: .whitespacesAndNewlines)
+    func addFeedback(text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         guard let lat = locationManager.latitude, let lng = locationManager.longitude else {
             errorMessage = "Location not available"
@@ -163,8 +204,13 @@ final class PostDetailViewModel: ObservableObject {
 
         isSendingFeedback = true
         do {
-            let fb = try await interactionService.addFeedback(postId: post.id, text: trimmed, latitude: lat, longitude: lng)
-            feedback.append(fb)
+            let fb = try await interactionService.addFeedback(
+                postId: post.id,
+                text: trimmed,
+                latitude: lat,
+                longitude: lng
+            )
+            feedbacks.append(fb)
             feedbackText = ""
         } catch {
             errorMessage = "Failed to send feedback"
@@ -181,6 +227,10 @@ final class PostDetailViewModel: ObservableObject {
             errorMessage = "Failed to delete post. Please try again."
         }
         isDeleting = false
+    }
+
+    func onLocationTapped() {
+        guard post.latitude != nil, post.longitude != nil else { return }
     }
 
     private func loadOwnerProfile() async {

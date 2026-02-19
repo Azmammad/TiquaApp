@@ -69,8 +69,12 @@ struct PostDetailView: View {
 
             if viewModel.isOwner {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showDeleteConfirmation = true
+                    Menu {
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("Delete Post", systemImage: "trash")
+                        }
                     } label: {
                         if viewModel.isDeleting {
                             ProgressView()
@@ -123,21 +127,26 @@ struct PostDetailView: View {
                     .foregroundColor(.primary)
 
                 if let locationName = viewModel.post.locationName {
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.accentColor)
-
-                        Text(locationName)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-
-                        if viewModel.post.latitude != nil {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 12))
+                    Button {
+                        viewModel.onLocationTapped()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 13))
                                 .foregroundColor(.accentColor)
+
+                            Text(locationName)
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+
+                            if viewModel.post.latitude != nil {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.accentColor)
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Text(viewModel.timeAgoString(from: viewModel.post.createdAt))
@@ -196,11 +205,15 @@ struct PostDetailView: View {
 
             Spacer()
 
-            Button {} label: {
-                Image(systemName: "bookmark")
+            Button {
+                Task { await viewModel.toggleSave() }
+            } label: {
+                Image(systemName: viewModel.isSaved ? "bookmark.fill" : "bookmark")
                     .font(.system(size: 22))
-                    .foregroundColor(.primary)
+                    .foregroundColor(viewModel.isSaved ? .accentColor : .primary)
+                    .animation(.easeInOut(duration: 0.15), value: viewModel.isSaved)
             }
+            .disabled(viewModel.isSaveLoading)
         }
     }
 
@@ -265,7 +278,7 @@ struct PostDetailView: View {
                     placeholder: "Share your experience here...",
                     isSending: viewModel.isSendingFeedback
                 ) {
-                    Task { await viewModel.sendFeedback() }
+                    Task { await viewModel.addFeedback(text: viewModel.feedbackText) }
                 }
             } else {
                 HStack(spacing: 8) {
@@ -282,8 +295,14 @@ struct PostDetailView: View {
                 .cornerRadius(10)
             }
 
-            ForEach(viewModel.feedback) { item in
-                feedbackRow(item)
+            if viewModel.isFeedbackLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(viewModel.feedbacks) { item in
+                    feedbackRow(item)
+                }
             }
         }
         .padding(16)
