@@ -108,6 +108,14 @@ final class PostDetailViewModel: ObservableObject {
         canLeaveFeedback = false
         feedbackVerificationType = nil
 
+        guard let uid = currentUserId else { return }
+
+        if uid == post.ownerId {
+            canLeaveFeedback = false
+            feedbackVerificationType = nil
+            return
+        }
+
         guard post.latitude != nil, post.longitude != nil else { return }
 
         locationManager.requestLocation()
@@ -128,8 +136,7 @@ final class PostDetailViewModel: ObservableObject {
             }
         }
 
-        guard let uid = currentUserId,
-              let postCity = extractCity(from: post.locationName) else {
+        guard let postCity = extractCity(from: post.locationName) else {
             canLeaveFeedback = false
             return
         }
