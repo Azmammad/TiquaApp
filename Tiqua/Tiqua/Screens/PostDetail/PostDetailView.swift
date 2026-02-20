@@ -73,7 +73,7 @@ struct PostDetailView: View {
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Label("Delete Post", systemImage: "trash")
+                            Label("Delete", systemImage: "trash")
                         }
                     } label: {
                         if viewModel.isDeleting {
