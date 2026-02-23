@@ -19,7 +19,8 @@ final class FirebasePostService: PostServiceProtocol {
         caption: String?,
         locationName: String?,
         latitude: Double?,
-        longitude: Double?
+        longitude: Double?,
+        countryName: String?
     ) async throws -> Post {
         guard let uid = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "FirebasePostService", code: 401,
@@ -42,7 +43,7 @@ final class FirebasePostService: PostServiceProtocol {
         let downloadURL = try await storageRef.downloadURL()
 
         let now = Date()
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "id": postId,
             "ownerId": uid,
             "username": username,
@@ -54,13 +55,17 @@ final class FirebasePostService: PostServiceProtocol {
             "createdAt": Timestamp(date: now)
         ]
 
+        if let countryName = countryName, !countryName.isEmpty {
+            data["countryName"] = countryName
+        }
+
         try await db.collection("posts").document(postId).setData(data)
 
         if let locationName = locationName, !locationName.isEmpty {
-            let cityName = extractCity(from: locationName)
-            if !cityName.isEmpty {
+            let city = extractCity(from: locationName)
+            if !city.isEmpty {
                 try await db.collection("users").document(uid).updateData([
-                    "visitedCities": FieldValue.arrayUnion([cityName])
+                    "visitedCities": FieldValue.arrayUnion([city])
                 ])
             }
         }
@@ -72,6 +77,7 @@ final class FirebasePostService: PostServiceProtocol {
             imageURL: downloadURL.absoluteString,
             caption: caption,
             locationName: locationName,
+            countryName: countryName,
             latitude: latitude,
             longitude: longitude,
             createdAt: now
@@ -128,6 +134,7 @@ final class FirebasePostService: PostServiceProtocol {
             imageURL: imageURL,
             caption: data["caption"] as? String,
             locationName: data["locationName"] as? String,
+            countryName: data["countryName"] as? String,
             latitude: data["latitude"] as? Double,
             longitude: data["longitude"] as? Double,
             createdAt: timestamp.dateValue()

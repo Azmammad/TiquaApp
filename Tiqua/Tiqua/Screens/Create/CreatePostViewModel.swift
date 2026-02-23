@@ -17,6 +17,7 @@ final class CreatePostViewModel: ObservableObject {
 
     @Published var locationName: String?
     @Published var locationSubtitle: String?
+    @Published var countryName: String?
     @Published var latitude: Double?
     @Published var longitude: Double?
 
@@ -53,6 +54,10 @@ final class CreatePostViewModel: ObservableObject {
         locationManager.$locationSubtitle
             .receive(on: RunLoop.main)
             .assign(to: &$locationSubtitle)
+
+        locationManager.$countryName
+            .receive(on: RunLoop.main)
+            .assign(to: &$countryName)
     }
 
     func requestLocation() {
@@ -65,6 +70,12 @@ final class CreatePostViewModel: ObservableObject {
             return
         }
 
+        let trimmedCaption = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCaption.isEmpty else {
+            errorMessage = "Please add a caption before publishing."
+            return
+        }
+
         guard latitude != nil, longitude != nil else {
             errorMessage = "Location is required to create a post."
             return
@@ -74,15 +85,15 @@ final class CreatePostViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let trimmedCaption = caption.trimmingCharacters(in: .whitespacesAndNewlines)
             let trimmedLocation = locationName?.trimmingCharacters(in: .whitespacesAndNewlines)
 
             _ = try await postService.createPost(
                 imageData: imageData,
-                caption: trimmedCaption.isEmpty ? nil : trimmedCaption,
+                caption: trimmedCaption,
                 locationName: (trimmedLocation?.isEmpty ?? true) ? nil : trimmedLocation,
                 latitude: latitude,
-                longitude: longitude
+                longitude: longitude,
+                countryName: countryName
             )
             didCreateSuccessfully = true
         } catch {
