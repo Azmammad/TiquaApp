@@ -77,15 +77,49 @@ final class FirebaseAuthService: AuthServiceProtocol {
     }
 
     func login(identifier: String, password: String) async throws -> User {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
         let email: String
 
-        if identifier.contains("@") {
-            email = identifier
+        if trimmed.contains("@") {
+            email = trimmed
         } else {
-            email = try await getEmail(from: identifier)
+            email = try await getEmail(from: trimmed)
         }
 
-        let result = try await auth.signIn(withEmail: email, password: password)
+        let result: AuthDataResult
+        do {
+            result = try await auth.signIn(withEmail: email, password: password)
+        } catch let error as NSError {
+            if error.domain == AuthErrorDomain {
+                let code = AuthErrorCode(rawValue: error.code)
+                switch code {
+                case .wrongPassword, .invalidCredential:
+                    throw NSError(
+                        domain: AuthErrorDomain,
+                        code: AuthErrorCode.wrongPassword.rawValue,
+                        userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."]
+                    )
+                case .userNotFound:
+                    throw AuthError.userNotFound
+                case .networkError:
+                    throw NSError(
+                        domain: AuthErrorDomain,
+                        code: AuthErrorCode.networkError.rawValue,
+                        userInfo: [NSLocalizedDescriptionKey: "Network error. Please check your internet connection."]
+                    )
+                case .tooManyRequests:
+                    throw NSError(
+                        domain: AuthErrorDomain,
+                        code: AuthErrorCode.tooManyRequests.rawValue,
+                        userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."]
+                    )
+                default:
+                    throw error
+                }
+            }
+            throw error
+        }
+
         let firebaseUser = result.user
 
         try await firebaseUser.reload()
@@ -100,7 +134,7 @@ final class FirebaseAuthService: AuthServiceProtocol {
         let userSnap = try await db.collection("users").document(uid).getDocument()
         guard let data = userSnap.data(),
               let username = data["username"] as? String,
-              let email = data["email"] as? String,
+              let userEmail = data["email"] as? String,
               let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
         else {
             throw AuthError.userNotFound
@@ -115,10 +149,17 @@ final class FirebaseAuthService: AuthServiceProtocol {
             )
         }
 
+        if data["usernameLower"] == nil {
+            try? await db.collection("users").document(uid).setData(
+                ["usernameLower": username.lowercased()],
+                merge: true
+            )
+        }
+
         return User(
             id: uid,
             username: username,
-            email: email,
+            email: userEmail,
             createdAt: createdAt,
             isEmailVerified: firebaseUser.isEmailVerified
         )
@@ -179,7 +220,6 @@ final class FirebaseAuthService: AuthServiceProtocol {
         let usernameLower = username.lowercased()
 
         let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
-
         if usernameSnap.exists, let uid = usernameSnap.data()?["uid"] as? String {
             let userSnap = try await db.collection("users").document(uid).getDocument()
             if let email = userSnap.data()?["email"] as? String {
@@ -187,24 +227,36 @@ final class FirebaseAuthService: AuthServiceProtocol {
             }
         }
 
-        let querySnap = try await db.collection("users")
+        let lowerSnap = try await db.collection("users")
             .whereField("usernameLower", isEqualTo: usernameLower)
             .limit(to: 1)
             .getDocuments()
 
-        if let doc = querySnap.documents.first,
+        if let doc = lowerSnap.documents.first,
            let email = doc.data()["email"] as? String {
             return email
         }
 
-        let fallbackSnap = try await db.collection("users")
-            .whereField("username", isEqualTo: username)
-            .limit(to: 1)
+        let end = usernameLower + "\u{f8ff}"
+        let rangeSnap = try await db.collection("users")
+            .whereField("username", isGreaterThanOrEqualTo: usernameLower)
+            .whereField("username", isLessThan: end)
+            .limit(to: 10)
             .getDocuments()
 
-        if let doc = fallbackSnap.documents.first,
-           let email = doc.data()["email"] as? String {
-            return email
+        for doc in rangeSnap.documents {
+            let data = doc.data()
+            if let storedUsername = data["username"] as? String,
+               storedUsername.lowercased() == usernameLower,
+               let email = data["email"] as? String {
+                if data["usernameLower"] == nil {
+                    try? await db.collection("users").document(doc.documentID).setData(
+                        ["usernameLower": usernameLower],
+                        merge: true
+                    )
+                }
+                return email
+            }
         }
 
         throw AuthError.userNotFound
