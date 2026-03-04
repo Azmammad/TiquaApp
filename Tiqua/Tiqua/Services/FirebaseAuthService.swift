@@ -180,17 +180,33 @@ final class FirebaseAuthService: AuthServiceProtocol {
 
         let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
 
-        guard usernameSnap.exists,
-              let uid = usernameSnap.data()?["uid"] as? String else {
-            throw AuthError.userNotFound
+        if usernameSnap.exists, let uid = usernameSnap.data()?["uid"] as? String {
+            let userSnap = try await db.collection("users").document(uid).getDocument()
+            if let email = userSnap.data()?["email"] as? String {
+                return email
+            }
         }
 
-        let userSnap = try await db.collection("users").document(uid).getDocument()
+        let querySnap = try await db.collection("users")
+            .whereField("usernameLower", isEqualTo: usernameLower)
+            .limit(to: 1)
+            .getDocuments()
 
-        guard let email = userSnap.data()?["email"] as? String else {
-            throw AuthError.userNotFound
+        if let doc = querySnap.documents.first,
+           let email = doc.data()["email"] as? String {
+            return email
         }
 
-        return email
+        let fallbackSnap = try await db.collection("users")
+            .whereField("username", isEqualTo: username)
+            .limit(to: 1)
+            .getDocuments()
+
+        if let doc = fallbackSnap.documents.first,
+           let email = doc.data()["email"] as? String {
+            return email
+        }
+
+        throw AuthError.userNotFound
     }
 }

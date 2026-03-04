@@ -4,18 +4,6 @@
 //
 //  Created by Əzi Cəbrayılov on 11.02.26.
 //
-//
-//  HomeView.swift
-//  Tiqua
-//
-//  Created by Əzi Cəbrayılov on 11.02.26.
-//
-//
-//  HomeView.swift
-//  Tiqua
-//
-//  Created by Əzi Cəbrayılov on 11.02.26.
-//
 import SwiftUI
 
 struct HomeView: View {
@@ -24,25 +12,31 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                searchButtonSection
+            GeometryReader { geo in
+                let searchHeight: CGFloat = 58
+                let mapHeight: CGFloat = max(80, geo.size.height * 0.12)
+                let spacing: CGFloat = 12
+                let carouselHeight = geo.size.height - searchHeight - mapHeight - spacing * 2
 
-                if viewModel.isLoading && viewModel.allPosts.isEmpty {
-                    Spacer()
-                    ProgressView()
-                        .scaleEffect(1.4)
-                    Spacer()
-                } else if viewModel.allPosts.isEmpty && !viewModel.isLoading {
-                    emptyView
-                } else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 16) {
+                VStack(spacing: 0) {
+                    searchButtonSection
+                        .frame(height: searchHeight)
+
+                    if viewModel.isLoading && viewModel.allPosts.isEmpty {
+                        Spacer()
+                        ProgressView().scaleEffect(1.4)
+                        Spacer()
+                    } else if viewModel.allPosts.isEmpty && !viewModel.isLoading {
+                        emptyView
+                    } else {
+                        VStack(spacing: spacing) {
                             DiscoverCarouselSection(posts: viewModel.filteredPosts)
+                                .frame(height: carouselHeight)
 
                             MapPlaceholderSection()
+                                .frame(height: mapHeight)
                         }
                         .padding(.top, 4)
-                        .padding(.bottom, 32)
                     }
                 }
             }
@@ -54,9 +48,6 @@ struct HomeView: View {
                 }
             }
             .task {
-                await viewModel.loadPosts()
-            }
-            .refreshable {
                 await viewModel.loadPosts()
             }
             .fullScreenCover(isPresented: $showSearch) {

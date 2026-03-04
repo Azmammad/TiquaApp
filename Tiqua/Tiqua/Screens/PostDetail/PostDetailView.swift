@@ -70,10 +70,16 @@ struct PostDetailView: View {
             if viewModel.isOwner {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        Button {
+                            viewModel.startEditingCaption()
+                        } label: {
+                            Label("Edit Caption", systemImage: "pencil")
+                        }
+
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("Delete Post", systemImage: "trash")
                         }
                     } label: {
                         if viewModel.isDeleting {
@@ -219,7 +225,33 @@ struct PostDetailView: View {
 
     @ViewBuilder
     private var captionSection: some View {
-        if let caption = viewModel.post.caption, !caption.isEmpty {
+        if viewModel.isEditingCaption {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Edit caption...", text: $viewModel.editedCaption, axis: .vertical)
+                    .font(.system(size: 15))
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+
+                HStack(spacing: 12) {
+                    Button {
+                        viewModel.cancelEditingCaption()
+                    } label: {
+                        Text("Cancel")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Button {
+                        Task { await viewModel.saveCaption() }
+                    } label: {
+                        Text("Save")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            }
+        } else if let caption = viewModel.post.caption, !caption.isEmpty {
             HStack(alignment: .top, spacing: 0) {
                 (
                     Text(viewModel.post.username)
@@ -413,6 +445,17 @@ struct PostDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.systemGray6).opacity(0.7))
             .cornerRadius(12)
+
+            if viewModel.canDeleteComment(comment) {
+                Button {
+                    Task { await viewModel.deleteComment(comment) }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13))
+                        .foregroundColor(.red.opacity(0.7))
+                }
+                .padding(.top, 14)
+            }
         }
     }
 
@@ -455,6 +498,17 @@ struct PostDetailView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.1), lineWidth: 1)
             )
+
+            if viewModel.canDeleteFeedback(item) {
+                Button {
+                    Task { await viewModel.deleteFeedback(item) }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13))
+                        .foregroundColor(.red.opacity(0.7))
+                }
+                .padding(.top, 14)
+            }
         }
     }
 

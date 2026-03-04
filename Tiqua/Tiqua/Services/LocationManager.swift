@@ -4,6 +4,7 @@
 //
 //  Created by Əzi Cəbrayılov on 18.02.26.
 //
+
 import Foundation
 import CoreLocation
 import Combine
@@ -44,7 +45,9 @@ final class LocationManager: NSObject, ObservableObject {
 
     private func reverseGeocode(location: CLLocation) {
         let geocoder = CLGeocoder()
-        geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+        let englishLocale = Locale(identifier: "en_US")
+
+        geocoder.reverseGeocodeLocation(location, preferredLocale: englishLocale) { [weak self] placemarks, _ in
             guard let self = self, let placemark = placemarks?.first else {
                 Task { @MainActor in self?.isLoading = false }
                 return

@@ -4,6 +4,7 @@
 //
 //  Created by Əzi Cəbrayılov on 19.02.26.
 //
+
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
@@ -64,6 +65,15 @@ final class FirebasePostInteractionService: PostInteractionServiceProtocol {
         )
     }
 
+    func deleteComment(postId: String, commentId: String) async throws {
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("comments")
+            .document(commentId)
+            .delete()
+    }
+
     func fetchFeedback(postId: String) async throws -> [Feedback] {
         let snapshot = try await db
             .collection("posts")
@@ -116,6 +126,15 @@ final class FirebasePostInteractionService: PostInteractionServiceProtocol {
             isLocationVerified: true,
             createdAt: now
         )
+    }
+
+    func deleteFeedback(postId: String, feedbackId: String) async throws {
+        try await db
+            .collection("posts")
+            .document(postId)
+            .collection("feedback")
+            .document(feedbackId)
+            .delete()
     }
 
     func checkIfLiked(postId: String, userId: String) async throws -> Bool {
@@ -194,6 +213,13 @@ final class FirebasePostInteractionService: PostInteractionServiceProtocol {
             .getDocument()
 
         return doc.exists
+    }
+
+    func updateCaption(postId: String, caption: String) async throws {
+        try await db
+            .collection("posts")
+            .document(postId)
+            .updateData(["caption": caption])
     }
 
     private func decodeComment(_ document: QueryDocumentSnapshot) -> Comment? {

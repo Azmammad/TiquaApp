@@ -15,6 +15,7 @@ final class ProfileViewModel: ObservableObject {
     @Published var isLoadingPosts: Bool = false
     @Published var hasLoadedPosts: Bool = false
     @Published var errorMessage: String?
+    @Published var followerCount: Int = 0
 
     private let profileService: ProfileServiceProtocol
     private let postService: PostServiceProtocol
@@ -40,6 +41,9 @@ final class ProfileViewModel: ObservableObject {
 
         do {
             user = try await profileService.fetchCurrentUser()
+            if let uid = user?.id {
+                followerCount = try await profileService.fetchFollowerCount(userId: uid)
+            }
         } catch {
             errorMessage = "Failed to load profile: \(error.localizedDescription)"
         }

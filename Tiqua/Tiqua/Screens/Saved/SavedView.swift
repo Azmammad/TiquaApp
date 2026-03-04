@@ -10,8 +10,8 @@ struct SavedView: View {
     @StateObject private var viewModel = SavedViewModel()
 
     private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
     ]
 
     var body: some View {
@@ -30,24 +30,21 @@ struct SavedView: View {
             .navigationTitle("Saved")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if viewModel.isDeleteMode {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !viewModel.savedPosts.isEmpty {
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                viewModel.exitDeleteMode()
+                                if viewModel.isDeleteMode {
+                                    viewModel.exitDeleteMode()
+                                } else {
+                                    viewModel.enterDeleteMode()
+                                }
                             }
                         } label: {
-                            Text("Done")
+                            Text(viewModel.isDeleteMode ? "Done" : "Edit")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.accentColor)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color.accentColor, lineWidth: 1.5)
-                                )
                         }
-                        .transition(.opacity.combined(with: .scale))
                     }
                 }
             }

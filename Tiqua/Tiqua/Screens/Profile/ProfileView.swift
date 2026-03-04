@@ -138,9 +138,9 @@ struct ProfileView: View {
                 .frame(height: 40)
 
             VStack(spacing: 4) {
-                Text("0")
+                Text("\(viewModel.followerCount)")
                     .font(.system(size: 20, weight: .bold))
-                Text("Saved")
+                Text("Followers")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }

@@ -11,7 +11,7 @@ struct Post: Codable, Identifiable {
     let ownerId: String
     let username: String
     let imageURL: String
-    let caption: String?
+    var caption: String?
     let locationName: String?
     let countryName: String?
     let latitude: Double?

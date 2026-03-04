@@ -6,17 +6,17 @@
 //
 import Foundation
 
-struct User: Codable, Identifiable {
+struct User: Codable, Identifiable, Hashable {
     let id: String
     let username: String
     let email: String
     let createdAt: Date
     let isEmailVerified: Bool
-    
+
     var fullName: String?
     var bio: String?
     var profileImageURL: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case username
@@ -26,5 +26,13 @@ struct User: Codable, Identifiable {
         case fullName
         case bio
         case profileImageURL
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: User, rhs: User) -> Bool {
+        lhs.id == rhs.id
     }
 }

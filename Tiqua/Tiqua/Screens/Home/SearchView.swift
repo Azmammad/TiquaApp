@@ -4,14 +4,13 @@
 //
 //  Created by Əzi Cəbrayılov on 26.02.26.
 //
-
 import SwiftUI
-import Kingfisher
 
 struct SearchView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: HomeViewModel
     @FocusState private var isFieldFocused: Bool
+    @State private var selectedUser: User?
 
     var body: some View {
         NavigationStack {
@@ -53,7 +52,12 @@ struct SearchView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(viewModel.searchResults) { user in
-                                UserSearchResultRow(user: user)
+                                Button {
+                                    selectedUser = user
+                                } label: {
+                                    UserSearchResultRow(user: user)
+                                }
+                                .buttonStyle(.plain)
 
                                 if user.id != viewModel.searchResults.last?.id {
                                     Divider()
@@ -75,6 +79,9 @@ struct SearchView: View {
                     .font(.system(size: 16))
                     .foregroundColor(.primary)
                 }
+            }
+            .navigationDestination(item: $selectedUser) { user in
+                UserProfileView(userId: user.id)
             }
             .onAppear {
                 isFieldFocused = true

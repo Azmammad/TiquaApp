@@ -8,52 +8,42 @@ import SwiftUI
 import PhotosUI
 
 struct CreatePostView: View {
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = CreatePostViewModel()
 
     @State private var selectedItem: PhotosPickerItem?
     @State private var previewImage: Image?
     @State private var showErrorAlert = false
+    @State private var showSuccessAlert = false
 
     private let captionCharacterLimit = 500
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
+            GeometryReader { geo in
+                let locationH: CGFloat = 70
+                let infoH: CGFloat = 48
+                let spacing: CGFloat = 12
+                let captionH: CGFloat = max(80, geo.size.height * 0.14)
+                let photoH = geo.size.height - locationH - captionH - infoH - spacing * 4
+
+                VStack(spacing: spacing) {
                     locationSection
-                        .padding(.top, 4)
+                        .frame(height: locationH)
 
-                    photoSection
+                    photoSection(height: photoH)
                         .padding(.horizontal, 20)
-                        .padding(.top, 20)
 
-                    captionSection
+                    captionSection(height: captionH)
                         .padding(.horizontal, 20)
-                        .padding(.top, 24)
 
                     infoSection
+                        .frame(height: infoH)
                         .padding(.horizontal, 20)
-                        .padding(.top, 24)
-
-                    Spacer(minLength: 40)
                 }
-                .padding(.bottom, 40)
             }
             .navigationTitle("Create Post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                    .disabled(viewModel.isLoading)
-                }
-
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task { await viewModel.createPost() }
@@ -82,7 +72,9 @@ struct CreatePostView: View {
                 }
             }
             .onChange(of: viewModel.didCreateSuccessfully) { _, newValue in
-                if newValue { dismiss() }
+                if newValue {
+                    showSuccessAlert = true
+                }
             }
             .onChange(of: viewModel.errorMessage) { _, newValue in
                 showErrorAlert = newValue != nil
@@ -91,6 +83,13 @@ struct CreatePostView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "An error occurred")
+            }
+            .alert("Success", isPresented: $showSuccessAlert) {
+                Button("OK", role: .cancel) {
+                    resetAll()
+                }
+            } message: {
+                Text("Your post has been shared!")
             }
             .allowsHitTesting(!viewModel.isLoading)
             .overlay {
@@ -105,6 +104,12 @@ struct CreatePostView: View {
                 }
             }
         }
+    }
+
+    private func resetAll() {
+        previewImage = nil
+        selectedItem = nil
+        viewModel.reset()
     }
 
     @ViewBuilder
@@ -124,131 +129,110 @@ struct CreatePostView: View {
         HStack(spacing: 12) {
             ProgressView()
                 .tint(.accentColor)
-
             Text("Getting your location...")
                 .font(.system(size: 15))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
         .background(Color(.systemGray6).opacity(0.5))
     }
 
     private var locationVerifiedView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                     .foregroundColor(.accentColor)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(viewModel.locationName ?? "")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.primary)
-
+                            .lineLimit(1)
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 14))
                             .foregroundColor(.accentColor)
                     }
-
                     if let subtitle = viewModel.locationSubtitle {
                         Text(subtitle)
-                            .font(.system(size: 14))
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
-
                 Spacer()
             }
             .padding(.horizontal, 20)
-            .padding(.top, 14)
 
             HStack(spacing: 4) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.accentColor)
-
                 Text("Location verified \u{2013} You're currently at this place")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentColor)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 14)
         }
+        .padding(.vertical, 6)
         .background(Color.accentColor.opacity(0.06))
     }
 
     private var locationDeniedView: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "location.slash.fill")
-                    .font(.system(size: 20))
-                    .foregroundColor(.red)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Location Access Denied")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Text("Location is required to create posts")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
+        HStack(spacing: 10) {
+            Image(systemName: "location.slash.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.red)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Location Access Denied")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Enable in Settings")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
             }
-
+            Spacer()
             Button {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Text("Enable Location in Settings")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .background(Color.accentColor)
-                    .cornerRadius(12)
+                Text("Settings")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.accentColor)
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
         .background(Color.red.opacity(0.05))
     }
 
     private var locationRequestView: some View {
         HStack(spacing: 10) {
             Image(systemName: "location.circle")
-                .font(.system(size: 20))
+                .font(.system(size: 18))
                 .foregroundColor(.secondary)
-
             Text("Requesting location access...")
-                .font(.system(size: 15))
+                .font(.system(size: 14))
                 .foregroundColor(.secondary)
-
             Spacer()
-
             Button {
                 viewModel.requestLocation()
             } label: {
                 Text("Retry")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.accentColor)
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
         .background(Color(.systemGray6).opacity(0.5))
     }
 
-    private var photoSection: some View {
-        VStack(spacing: 12) {
+    private func photoSection(height: CGFloat) -> some View {
+        VStack(spacing: 8) {
             if previewImage != nil {
                 ZStack(alignment: .topTrailing) {
-                    photoContainer
+                    photoContainer(height: height - 28)
 
                     Button {
                         previewImage = nil
@@ -256,29 +240,31 @@ struct CreatePostView: View {
                         selectedItem = nil
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.system(size: 26))
                             .foregroundStyle(.white, .black.opacity(0.5))
                     }
-                    .padding(12)
+                    .padding(10)
                 }
 
                 PhotosPicker(selection: $selectedItem, matching: .images) {
                     Text("Change Photo")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.accentColor)
                 }
+                .frame(height: 20)
             } else {
                 PhotosPicker(selection: $selectedItem, matching: .images) {
-                    photoContainer
+                    photoContainer(height: height)
                 }
             }
         }
+        .frame(height: height)
     }
 
-    private var photoContainer: some View {
+    private func photoContainer(height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 16)
             .fill(Color(.systemGray6).opacity(0.5))
-            .aspectRatio(1, contentMode: .fit)
+            .frame(height: height)
             .overlay(
                 Group {
                     if let previewImage = previewImage {
@@ -305,48 +291,45 @@ struct CreatePostView: View {
     }
 
     private var placeholderContent: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             ZStack {
                 Circle()
                     .fill(Color(.systemGray5))
-                    .frame(width: 72, height: 72)
-
+                    .frame(width: 56, height: 56)
                 Image(systemName: "photo.on.rectangle")
-                    .font(.system(size: 28))
+                    .font(.system(size: 24))
                     .foregroundColor(.accentColor)
             }
-
             Text("Add Photo")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.primary)
-
             Text("Tap to select from gallery")
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundColor(.secondary)
         }
     }
 
-    private var captionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func captionSection(height: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Caption")
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.primary)
 
             ZStack(alignment: .topLeading) {
                 if viewModel.caption.isEmpty {
                     Text("Share your experience at this place...")
-                        .font(.system(size: 16))
+                        .font(.system(size: 14))
                         .foregroundColor(Color(.systemGray3))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 16)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                 }
 
                 TextEditor(text: $viewModel.caption)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled()
-                    .frame(minHeight: 120)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 12)
+                    .font(.system(size: 14))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                     .scrollContentBackground(.hidden)
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
@@ -356,25 +339,25 @@ struct CreatePostView: View {
                         }
                     }
             }
+            .frame(height: height - 24)
         }
+        .frame(height: height)
     }
 
     private var infoSection: some View {
         HStack(spacing: 8) {
             Image(systemName: "lightbulb.fill")
-                .font(.system(size: 14))
-                .foregroundColor(.orange.opacity(0.8))
-
-            Text("You can only post when you're physically at the location")
                 .font(.system(size: 13))
+                .foregroundColor(.orange.opacity(0.8))
+            Text("You can only post when you're physically at the location")
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .lineLimit(2)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemGray6).opacity(0.6))
-        .cornerRadius(12)
+        .cornerRadius(10)
     }
 
     private func loadPhoto(from item: PhotosPickerItem) async {
@@ -382,7 +365,6 @@ struct CreatePostView: View {
             viewModel.errorMessage = "Failed to load image"
             return
         }
-
         viewModel.selectedImageData = data
         previewImage = Image(data: data)
     }

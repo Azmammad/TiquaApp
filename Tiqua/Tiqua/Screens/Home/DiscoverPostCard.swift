@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import Kingfisher
+import FirebaseAuth
 
 struct DiscoverPostCard: View {
     let post: Post
@@ -13,9 +14,12 @@ struct DiscoverPostCard: View {
     let height: CGFloat
 
     @State private var isLiked: Bool = false
+    @State private var isSaved: Bool = false
     @State private var showHeart: Bool = false
     @State private var heartScale: CGFloat = 0.4
     @State private var heartOpacity: Double = 0
+
+    private let interactionService: PostInteractionServiceProtocol = FirebasePostInteractionService()
 
     var body: some View {
         NavigationLink(destination: PostDetailView(post: post)) {
@@ -36,9 +40,12 @@ struct DiscoverPostCard: View {
         .buttonStyle(.plain)
         .simultaneousGesture(
             TapGesture(count: 2).onEnded {
-                triggerLike()
+                handleDoubleTapLike()
             }
         )
+        .task {
+            await loadStates()
+        }
     }
 
     private var imageLayer: some View {
@@ -73,8 +80,10 @@ struct DiscoverPostCard: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button {} label: {
-                    Image(systemName: "bookmark")
+                Button {
+                    handleSaveTap()
+                } label: {
+                    Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.white)
                         .frame(width: 40, height: 40)
@@ -104,7 +113,7 @@ struct DiscoverPostCard: View {
                 Spacer()
 
                 Button {
-                    triggerLike()
+                    handleLikeTap()
                 } label: {
                     Image(systemName: isLiked ? "heart.fill" : "heart")
                         .font(.system(size: 15, weight: .medium))
@@ -128,8 +137,65 @@ struct DiscoverPostCard: View {
             .opacity(heartOpacity)
     }
 
-    private func triggerLike() {
+    private func loadStates() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        if let liked = try? await interactionService.checkIfLiked(postId: post.id, userId: uid) {
+            isLiked = liked
+        }
+        if let saved = try? await interactionService.isPostSaved(postId: post.id, userId: uid) {
+            isSaved = saved
+        }
+    }
+
+    private func handleDoubleTapLike() {
+        if !isLiked {
+            isLiked = true
+            persistLike(shouldLike: true)
+        }
+        showHeartAnimation()
+    }
+
+    private func handleLikeTap() {
         isLiked.toggle()
+        persistLike(shouldLike: isLiked)
+        if isLiked {
+            showHeartAnimation()
+        }
+    }
+
+    private func handleSaveTap() {
+        isSaved.toggle()
+        let shouldSave = isSaved
+        Task {
+            guard let uid = Auth.auth().currentUser?.uid else { return }
+            do {
+                if shouldSave {
+                    try await interactionService.savePost(postId: post.id, userId: uid)
+                } else {
+                    try await interactionService.unsavePost(postId: post.id, userId: uid)
+                }
+            } catch {
+                await MainActor.run { isSaved = !shouldSave }
+            }
+        }
+    }
+
+    private func persistLike(shouldLike: Bool) {
+        Task {
+            guard let uid = Auth.auth().currentUser?.uid else { return }
+            do {
+                if shouldLike {
+                    try await interactionService.likePost(postId: post.id, userId: uid)
+                } else {
+                    try await interactionService.unlikePost(postId: post.id, userId: uid)
+                }
+            } catch {
+                await MainActor.run { isLiked = !shouldLike }
+            }
+        }
+    }
+
+    private func showHeartAnimation() {
         showHeart = true
         heartScale = 0.4
         heartOpacity = 1

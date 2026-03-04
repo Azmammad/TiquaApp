@@ -12,7 +12,7 @@ struct DiscoverCarouselSection: View {
     var body: some View {
         GeometryReader { geo in
             let cardWidth = geo.size.width * 0.80
-            let cardHeight = cardWidth * 1.55
+            let cardHeight = geo.size.height
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 14) {
@@ -31,6 +31,5 @@ struct DiscoverCarouselSection: View {
             .scrollTargetBehavior(.viewAligned)
             .frame(width: geo.size.width, height: cardHeight)
         }
-        .frame(height: UIScreen.main.bounds.width * 0.80 * 1.55)
     }
 }

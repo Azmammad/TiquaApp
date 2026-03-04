@@ -33,6 +33,8 @@ final class PostDetailViewModel: ObservableObject {
     @Published var didDeletePost: Bool = false
     @Published var canLeaveFeedback: Bool = false
     @Published var feedbackVerificationType: String?
+    @Published var isEditingCaption: Bool = false
+    @Published var editedCaption: String = ""
 
     private let interactionService: PostInteractionServiceProtocol
     private let profileService: ProfileServiceProtocol
@@ -46,7 +48,7 @@ final class PostDetailViewModel: ObservableObject {
         return post.ownerId == uid
     }
 
-    private var currentUserId: String? {
+    var currentUserId: String? {
         Auth.auth().currentUser?.uid
     }
 
@@ -250,6 +252,15 @@ final class PostDetailViewModel: ObservableObject {
         isSendingComment = false
     }
 
+    func deleteComment(_ comment: Comment) async {
+        do {
+            try await interactionService.deleteComment(postId: post.id, commentId: comment.id)
+            comments.removeAll { $0.id == comment.id }
+        } catch {
+            errorMessage = "Failed to delete comment"
+        }
+    }
+
     func addFeedback(text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, canLeaveFeedback else { return }
@@ -275,6 +286,35 @@ final class PostDetailViewModel: ObservableObject {
         isSendingFeedback = false
     }
 
+    func deleteFeedback(_ feedback: Feedback) async {
+        do {
+            try await interactionService.deleteFeedback(postId: post.id, feedbackId: feedback.id)
+            feedbacks.removeAll { $0.id == feedback.id }
+        } catch {
+            errorMessage = "Failed to delete feedback"
+        }
+    }
+
+    func startEditingCaption() {
+        editedCaption = post.caption ?? ""
+        isEditingCaption = true
+    }
+
+    func saveCaption() async {
+        let trimmed = editedCaption.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await interactionService.updateCaption(postId: post.id, caption: trimmed)
+            post.caption = trimmed
+            isEditingCaption = false
+        } catch {
+            errorMessage = "Failed to update caption"
+        }
+    }
+
+    func cancelEditingCaption() {
+        isEditingCaption = false
+    }
+
     func deletePost() async {
         isDeleting = true
         do {
@@ -286,16 +326,24 @@ final class PostDetailViewModel: ObservableObject {
         isDeleting = false
     }
 
+    func canDeleteComment(_ comment: Comment) -> Bool {
+        guard let uid = currentUserId else { return false }
+        return comment.userId == uid || isOwner
+    }
+
+    func canDeleteFeedback(_ feedback: Feedback) -> Bool {
+        guard let uid = currentUserId else { return false }
+        return feedback.userId == uid
+    }
+
     func onLocationTapped() {
         guard post.latitude != nil, post.longitude != nil else { return }
     }
 
     private func loadOwnerProfile() async {
         do {
-            let user = try await profileService.fetchCurrentUser()
-            if user.id == post.ownerId {
-                ownerProfileImageURL = user.profileImageURL
-            }
+            let ownerDoc = try await db.collection("users").document(post.ownerId).getDocument()
+            ownerProfileImageURL = ownerDoc.data()?["profileImageURL"] as? String
         } catch {}
     }
 
