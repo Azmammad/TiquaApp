@@ -21,6 +21,7 @@ final class UserProfileViewModel: ObservableObject {
     let userId: String
     private let profileService: ProfileServiceProtocol
     private let postService: PostServiceProtocol
+    private let activityService = FirebaseActivityService()
 
     var isOwnProfile: Bool {
         Auth.auth().currentUser?.uid == userId
@@ -73,6 +74,7 @@ final class UserProfileViewModel: ObservableObject {
 
     func toggleFollow() async {
         guard !isToggling else { return }
+        guard let uid = Auth.auth().currentUser?.uid else { return }
         isToggling = true
 
         let wasFollowing = isFollowing
@@ -82,8 +84,19 @@ final class UserProfileViewModel: ObservableObject {
         do {
             if wasFollowing {
                 try await profileService.unfollowUser(targetUserId: userId)
+                await activityService.remove(
+                    from: userId,
+                    activityId: "follow_\(uid)"
+                )
             } else {
                 try await profileService.followUser(targetUserId: userId)
+                await activityService.send(
+                    to: userId,
+                    type: "follow",
+                    postId: nil,
+                    postImageURL: nil,
+                    activityId: "follow_\(uid)"
+                )
             }
         } catch {
             isFollowing = wasFollowing
