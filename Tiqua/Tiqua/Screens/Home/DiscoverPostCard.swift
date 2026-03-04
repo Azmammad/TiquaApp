@@ -20,6 +20,7 @@ struct DiscoverPostCard: View {
     @State private var heartOpacity: Double = 0
 
     private let interactionService: PostInteractionServiceProtocol = FirebasePostInteractionService()
+    private let activityService = FirebaseActivityService()
 
     var body: some View {
         NavigationLink(destination: PostDetailView(post: post)) {
@@ -186,8 +187,19 @@ struct DiscoverPostCard: View {
             do {
                 if shouldLike {
                     try await interactionService.likePost(postId: post.id, userId: uid)
+                    await activityService.send(
+                        to: post.ownerId,
+                        type: "like",
+                        postId: post.id,
+                        postImageURL: post.imageURL,
+                        activityId: "like_\(uid)_\(post.id)"
+                    )
                 } else {
                     try await interactionService.unlikePost(postId: post.id, userId: uid)
+                    await activityService.remove(
+                        from: post.ownerId,
+                        activityId: "like_\(uid)_\(post.id)"
+                    )
                 }
             } catch {
                 await MainActor.run { isLiked = !shouldLike }

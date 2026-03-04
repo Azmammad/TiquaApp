@@ -40,6 +40,7 @@ final class PostDetailViewModel: ObservableObject {
     private let profileService: ProfileServiceProtocol
     private let postService: PostServiceProtocol
     private let locationManager: LocationManager
+    private let activityService = FirebaseActivityService()
     private let db = Firestore.firestore()
     private let maxFeedbackDistance: Double = 300
 
@@ -203,8 +204,19 @@ final class PostDetailViewModel: ObservableObject {
         do {
             if previousLiked {
                 try await interactionService.unlikePost(postId: post.id, userId: uid)
+                await activityService.remove(
+                    from: post.ownerId,
+                    activityId: "like_\(uid)_\(post.id)"
+                )
             } else {
                 try await interactionService.likePost(postId: post.id, userId: uid)
+                await activityService.send(
+                    to: post.ownerId,
+                    type: "like",
+                    postId: post.id,
+                    postImageURL: post.imageURL,
+                    activityId: "like_\(uid)_\(post.id)"
+                )
             }
         } catch {
             isLiked = previousLiked
@@ -246,6 +258,14 @@ final class PostDetailViewModel: ObservableObject {
             let comment = try await interactionService.addComment(postId: post.id, text: trimmed)
             comments.append(comment)
             commentText = ""
+
+            await activityService.send(
+                to: post.ownerId,
+                type: "comment",
+                postId: post.id,
+                postImageURL: post.imageURL,
+                activityId: "comment_\(comment.id)"
+            )
         } catch {
             errorMessage = "Failed to send comment"
         }
@@ -256,6 +276,10 @@ final class PostDetailViewModel: ObservableObject {
         do {
             try await interactionService.deleteComment(postId: post.id, commentId: comment.id)
             comments.removeAll { $0.id == comment.id }
+            await activityService.remove(
+                from: post.ownerId,
+                activityId: "comment_\(comment.id)"
+            )
         } catch {
             errorMessage = "Failed to delete comment"
         }
@@ -280,6 +304,14 @@ final class PostDetailViewModel: ObservableObject {
             fb.verificationType = feedbackVerificationType
             feedbacks.append(fb)
             feedbackText = ""
+
+            await activityService.send(
+                to: post.ownerId,
+                type: "feedback",
+                postId: post.id,
+                postImageURL: post.imageURL,
+                activityId: "feedback_\(fb.id)"
+            )
         } catch {
             errorMessage = "Failed to send feedback"
         }
@@ -290,6 +322,10 @@ final class PostDetailViewModel: ObservableObject {
         do {
             try await interactionService.deleteFeedback(postId: post.id, feedbackId: feedback.id)
             feedbacks.removeAll { $0.id == feedback.id }
+            await activityService.remove(
+                from: post.ownerId,
+                activityId: "feedback_\(feedback.id)"
+            )
         } catch {
             errorMessage = "Failed to delete feedback"
         }

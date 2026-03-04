@@ -8,6 +8,7 @@ import SwiftUI
 import PhotosUI
 
 struct CreatePostView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = CreatePostViewModel()
 
     @State private var selectedItem: PhotosPickerItem?
@@ -44,6 +45,16 @@ struct CreatePostView: View {
             .navigationTitle("Create Post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task { await viewModel.createPost() }
@@ -87,6 +98,7 @@ struct CreatePostView: View {
             .alert("Success", isPresented: $showSuccessAlert) {
                 Button("OK", role: .cancel) {
                     resetAll()
+                    dismiss()
                 }
             } message: {
                 Text("Your post has been shared!")
