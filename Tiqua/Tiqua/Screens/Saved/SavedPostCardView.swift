@@ -73,11 +73,13 @@ struct SavedPostCardView: View {
                                 .truncationMode(.tail)
                         }
                     }
-                    .frame(width: geo.size.width, height: geo.size.height * 1 / 3, alignment: .leading)
                     .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: geo.size.height * 1 / 3)
                     .background(cardColor)
                 }
             }
+            .frame(maxWidth: .infinity)
             .frame(height: 200)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .rotationEffect(.degrees(wiggleAngle))
@@ -95,6 +97,7 @@ struct SavedPostCardView: View {
                 .transition(.scale.combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 200)
         .onChange(of: isDeleteMode) { _, newValue in
             if newValue {

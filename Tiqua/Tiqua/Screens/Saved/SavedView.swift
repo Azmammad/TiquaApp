@@ -11,7 +11,7 @@ struct SavedView: View {
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
+        GridItem(.flexible(), spacing: 0)
     ]
 
     var body: some View {
@@ -59,29 +59,15 @@ struct SavedView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.savedPosts) { post in
-                    Group {
-                        if viewModel.isDeleteMode {
-                            SavedPostCardView(
-                                post: post,
-                                isDeleteMode: viewModel.isDeleteMode
-                            ) {
-                                Task { await viewModel.removeSavedPost(postId: post.id) }
-                            }
-                        } else {
-                            NavigationLink(destination: PostDetailView(post: post)) {
-                                SavedPostCardView(
-                                    post: post,
-                                    isDeleteMode: viewModel.isDeleteMode
-                                ) {
-                                    Task { await viewModel.removeSavedPost(postId: post.id) }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .onLongPressGesture(minimumDuration: 0.4) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    viewModel.enterDeleteMode()
-                                }
-                            }
+                    SavedPostCardView(
+                        post: post,
+                        isDeleteMode: viewModel.isDeleteMode
+                    ) {
+                        Task { await viewModel.removeSavedPost(postId: post.id) }
+                    }
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.enterDeleteMode()
                         }
                     }
                 }
