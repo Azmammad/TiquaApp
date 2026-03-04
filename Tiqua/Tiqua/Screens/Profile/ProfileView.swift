@@ -13,6 +13,8 @@ struct ProfileView: View {
 
     @StateObject private var viewModel = ProfileViewModel()
     @State private var showEditProfile = false
+    @State private var showSavedView = false
+    @State private var showFollowersList = false
     @Binding var switchToTab: MainTabView.Tab
 
     private let columns = [
@@ -89,6 +91,7 @@ struct ProfileView: View {
                     .refreshable {
                         await viewModel.loadUser()
                         await viewModel.loadUserPosts()
+                        await viewModel.loadSavedCount()
                     }
                 }
             }
@@ -108,6 +111,7 @@ struct ProfileView: View {
             .task {
                 await viewModel.loadUser()
                 await viewModel.loadUserPosts()
+                await viewModel.loadSavedCount()
             }
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView()
@@ -119,6 +123,12 @@ struct ProfileView: View {
                         await viewModel.loadUserPosts()
                     }
                 }
+            }
+            .navigationDestination(isPresented: $showFollowersList) {
+                FollowersListView(userId: viewModel.user?.id ?? "")
+            }
+            .sheet(isPresented: $showSavedView) {
+                SavedView()
             }
         }
     }
@@ -137,12 +147,34 @@ struct ProfileView: View {
             Divider()
                 .frame(height: 40)
 
-            VStack(spacing: 4) {
-                Text("\(viewModel.followerCount)")
-                    .font(.system(size: 20, weight: .bold))
-                Text("Followers")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+            Button {
+                showFollowersList = true
+            } label: {
+                VStack(spacing: 4) {
+                    Text("\(viewModel.followerCount)")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                    Text("Followers")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider()
+                .frame(height: 40)
+
+            Button {
+                showSavedView = true
+            } label: {
+                VStack(spacing: 4) {
+                    Text("\(viewModel.savedCount)")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                    Text("Saved")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
             }
             .frame(maxWidth: .infinity)
         }

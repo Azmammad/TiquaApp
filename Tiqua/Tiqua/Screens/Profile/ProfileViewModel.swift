@@ -6,6 +6,8 @@
 //
 import Foundation
 import Combine
+import FirebaseAuth
+import FirebaseFirestore
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
@@ -16,9 +18,11 @@ final class ProfileViewModel: ObservableObject {
     @Published var hasLoadedPosts: Bool = false
     @Published var errorMessage: String?
     @Published var followerCount: Int = 0
+    @Published var savedCount: Int = 0
 
     private let profileService: ProfileServiceProtocol
     private let postService: PostServiceProtocol
+    private let db = Firestore.firestore()
 
     init(
         profileService: ProfileServiceProtocol,
@@ -65,6 +69,18 @@ final class ProfileViewModel: ObservableObject {
 
         hasLoadedPosts = true
         isLoadingPosts = false
+    }
+
+    func loadSavedCount() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        do {
+            let snapshot = try await db.collection("users").document(uid)
+                .collection("savedPosts").getDocuments()
+            savedCount = snapshot.documents.count
+        } catch {
+            savedCount = 0
+        }
     }
 
     var postCount: Int {
