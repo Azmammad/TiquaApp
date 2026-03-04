@@ -12,8 +12,9 @@ struct MainTabView: View {
     
     enum Tab {
         case home
+        case map
         case create
-        case saved
+        case activity
         case profile
     }
     var body: some View {
@@ -21,28 +22,30 @@ struct MainTabView: View {
             HomeView()
                 .tabItem {
                     Image(systemName: selectedTab == .home ? "house.fill" : "house")
-                    Text("Home")
                 }
                 .tag(Tab.home)
             
+            MapScreenView()
+                .tabItem {
+                    Image(systemName: selectedTab == .map ? "map.fill" : "map")
+                }
+                .tag(Tab.map)
+            
             CreatePostView()
                 .tabItem {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Create")
+                    Image(systemName: "plus.app")
                 }
                 .tag(Tab.create)
             
-            SavedView()
+            ActivityView()
                 .tabItem {
-                    Image(systemName: selectedTab == .saved ? "bookmark.fill" : "bookmark")
-                    Text("Saved")
+                    Image(systemName: selectedTab == .activity ? "bell.fill" : "bell")
                 }
-                .tag(Tab.saved)
+                .tag(Tab.activity)
             
             ProfileView(switchToTab: $selectedTab)
                 .tabItem {
                     Image(systemName: selectedTab == .profile ? "person.fill" : "person")
-                    Text("Profile")
                 }
                 .tag(Tab.profile)
         }
