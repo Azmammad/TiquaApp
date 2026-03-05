@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct Post: Codable, Identifiable {
+struct Post: Codable, Identifiable, Hashable {
     let id: String
     let ownerId: String
     let username: String
@@ -39,5 +39,13 @@ struct Post: Codable, Identifiable {
         case latitude
         case longitude
         case createdAt
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Post, rhs: Post) -> Bool {
+        lhs.id == rhs.id
     }
 }
