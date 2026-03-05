@@ -130,6 +130,13 @@ struct ProfileView: View {
             .sheet(isPresented: $showSavedView) {
                 SavedView()
             }
+            .onChange(of: showSavedView) { _, newValue in
+                if !newValue {
+                    Task {
+                        await viewModel.loadSavedCount()
+                    }
+                }
+            }
         }
     }
 
