@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject var mapFocusState: MapFocusState
     @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
     @State private var currentPostId: String?
@@ -48,7 +49,16 @@ struct HomeView: View {
                                 latitude: currentPost?.latitude,
                                 longitude: currentPost?.longitude,
                                 locationName: currentPost?.locationName
-                            )
+                            ) {
+                                if let lat = currentPost?.latitude,
+                                   let lng = currentPost?.longitude {
+                                    mapFocusState.focusOn(
+                                        latitude: lat,
+                                        longitude: lng,
+                                        locationName: currentPost?.locationName
+                                    )
+                                }
+                            }
                             .frame(height: mapHeight)
                         }
                         .padding(.top, 4)

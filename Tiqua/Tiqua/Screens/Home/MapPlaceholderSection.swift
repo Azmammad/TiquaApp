@@ -11,6 +11,7 @@ struct MapPlaceholderSection: View {
     var latitude: Double? = nil
     var longitude: Double? = nil
     var locationName: String? = nil
+    var onTap: (() -> Void)? = nil
 
     @State private var position: MapCameraPosition = .automatic
 
@@ -21,7 +22,7 @@ struct MapPlaceholderSection: View {
     var body: some View {
         Group {
             if hasLocation, let lat = latitude, let lng = longitude {
-                Map(position: $position, interactionModes: [.pan, .zoom]) {
+                Map(position: $position, interactionModes: []) {
                     Annotation(
                         locationName ?? "",
                         coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)
@@ -33,6 +34,20 @@ struct MapPlaceholderSection: View {
                 }
                 .mapStyle(.standard)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(alignment: .bottomTrailing) {
+                    Text("Tap to open map")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(8)
+                        .padding(8)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onTap?()
+                }
                 .onChange(of: lat) { _, _ in updateCamera() }
                 .onChange(of: lng) { _, _ in updateCamera() }
                 .onAppear { updateCamera() }
