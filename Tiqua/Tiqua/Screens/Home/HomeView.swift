@@ -9,6 +9,14 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
+    @State private var currentPostId: String?
+
+    private var currentPost: Post? {
+        guard let id = currentPostId else {
+            return viewModel.filteredPosts.first
+        }
+        return viewModel.filteredPosts.first { $0.id == id }
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,11 +38,18 @@ struct HomeView: View {
                         emptyView
                     } else {
                         VStack(spacing: spacing) {
-                            DiscoverCarouselSection(posts: viewModel.filteredPosts)
-                                .frame(height: carouselHeight)
+                            DiscoverCarouselSection(
+                                posts: viewModel.filteredPosts,
+                                currentPostId: $currentPostId
+                            )
+                            .frame(height: carouselHeight)
 
-                            MapPlaceholderSection()
-                                .frame(height: mapHeight)
+                            MapPlaceholderSection(
+                                latitude: currentPost?.latitude,
+                                longitude: currentPost?.longitude,
+                                locationName: currentPost?.locationName
+                            )
+                            .frame(height: mapHeight)
                         }
                         .padding(.top, 4)
                     }
