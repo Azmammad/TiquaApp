@@ -13,6 +13,7 @@ struct PostDetailView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var showErrorAlert = false
+    @State private var showMap = false
 
     init(post: Post) {
         _viewModel = StateObject(wrappedValue: PostDetailViewModel(post: post))
@@ -121,6 +122,13 @@ struct PostDetailView: View {
         .task {
             await viewModel.loadAll()
         }
+        .navigationDestination(isPresented: $showMap) {
+            MapScreenView(
+                latitude: viewModel.post.latitude,
+                longitude: viewModel.post.longitude,
+                locationName: viewModel.post.locationName
+            )
+        }
     }
 
     private var userInfoRow: some View {
@@ -134,7 +142,9 @@ struct PostDetailView: View {
 
                 if let locationName = viewModel.post.locationName {
                     Button {
-                        viewModel.onLocationTapped()
+                        if viewModel.post.latitude != nil && viewModel.post.longitude != nil {
+                            showMap = true
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "mappin.circle.fill")
