@@ -25,9 +25,12 @@ struct MainTabView: View {
                 }
                 .tag(Tab.home)
             
-            MapScreenView()
+            NavigationStack {
+                MapScreenView()
+            }
                 .tabItem {
                     Image(systemName: selectedTab == .map ? "map.fill" : "map")
+                    Text("Map")
                 }
                 .tag(Tab.map)
             
