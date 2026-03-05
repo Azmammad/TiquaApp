@@ -4,7 +4,6 @@
 //
 //  Created by Əzi Cəbrayılov on 14.02.26.
 //
-
 import SwiftUI
 
 struct MainTabView: View {
@@ -30,11 +29,10 @@ struct MainTabView: View {
             }
                 .tabItem {
                     Image(systemName: selectedTab == .map ? "map.fill" : "map")
-                    Text("Map")
                 }
                 .tag(Tab.map)
             
-            CreatePostView()
+            CreatePostView(switchToTab: $selectedTab)
                 .tabItem {
                     Image(systemName: "plus.app")
                 }
