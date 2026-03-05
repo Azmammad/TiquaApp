@@ -144,19 +144,21 @@ struct PostDetailView: View {
                             )
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 13))
-                                .foregroundColor(.accentColor)
-
-                            Text(locationName)
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-
-                            if viewModel.post.latitude != nil {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 12))
+                        VStack(alignment: .leading, spacing: 1) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "mappin.circle.fill")
+                                    .font(.system(size: 13))
                                     .foregroundColor(.accentColor)
+
+                                Text(locationName)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            if viewModel.post.latitude != nil && viewModel.post.longitude != nil {
+                                Text("Tap to view location")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentColor.opacity(0.7))
                             }
                         }
                     }
