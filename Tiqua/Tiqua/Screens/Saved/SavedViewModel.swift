@@ -54,6 +54,13 @@ final class SavedViewModel: ObservableObject {
             for postId in postIds {
                 if let post = try? await fetchPost(postId: postId) {
                     posts.append(post)
+                } else {
+                    try? await db
+                        .collection("users")
+                        .document(uid)
+                        .collection("savedPosts")
+                        .document(postId)
+                        .delete()
                 }
             }
 
@@ -87,13 +94,13 @@ final class SavedViewModel: ObservableObject {
     private func fetchPost(postId: String) async throws -> Post? {
         let doc = try await db.collection("posts").document(postId).getDocument()
 
-        guard
-            let data = doc.data(),
-            let id = data["id"] as? String,
-            let ownerId = data["ownerId"] as? String,
-            let username = data["username"] as? String,
-            let imageURL = data["imageURL"] as? String,
-            let timestamp = data["createdAt"] as? Timestamp
+        guard doc.exists,
+              let data = doc.data(),
+              let id = data["id"] as? String,
+              let ownerId = data["ownerId"] as? String,
+              let username = data["username"] as? String,
+              let imageURL = data["imageURL"] as? String,
+              let timestamp = data["createdAt"] as? Timestamp
         else { return nil }
 
         return Post(

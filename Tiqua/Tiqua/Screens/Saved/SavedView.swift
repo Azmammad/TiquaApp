@@ -15,56 +15,58 @@ struct SavedView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.savedPosts.isEmpty {
-                    ProgressView()
-                        .scaleEffect(1.4)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.savedPosts.isEmpty && !viewModel.isLoading {
-                    emptyStateView
-                } else {
-                    scrollContent
-                }
+        Group {
+            if viewModel.isLoading && viewModel.savedPosts.isEmpty {
+                ProgressView()
+                    .scaleEffect(1.4)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.savedPosts.isEmpty && !viewModel.isLoading {
+                emptyStateView
+            } else {
+                scrollContent
             }
-            .navigationTitle("Saved")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if !viewModel.savedPosts.isEmpty {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                if viewModel.isDeleteMode {
-                                    viewModel.exitDeleteMode()
-                                } else {
-                                    viewModel.enterDeleteMode()
-                                }
+        }
+        .navigationTitle("Saved")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if !viewModel.savedPosts.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if viewModel.isDeleteMode {
+                                viewModel.exitDeleteMode()
+                            } else {
+                                viewModel.enterDeleteMode()
                             }
-                        } label: {
-                            Text(viewModel.isDeleteMode ? "Done" : "Edit")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.accentColor)
                         }
+                    } label: {
+                        Text(viewModel.isDeleteMode ? "Done" : "Edit")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.accentColor)
                     }
                 }
             }
-            .task {
-                await viewModel.loadSavedPosts()
-            }
-            .animation(.easeInOut(duration: 0.2), value: viewModel.isDeleteMode)
         }
+        .task {
+            await viewModel.loadSavedPosts()
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isDeleteMode)
     }
 
     private var scrollContent: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(viewModel.savedPosts) { post in
-                    SavedPostCardView(
-                        post: post,
-                        isDeleteMode: viewModel.isDeleteMode
-                    ) {
-                        Task { await viewModel.removeSavedPost(postId: post.id) }
+                    NavigationLink(destination: PostDetailView(post: post)) {
+                        SavedPostCardView(
+                            post: post,
+                            isDeleteMode: viewModel.isDeleteMode
+                        ) {
+                            Task { await viewModel.removeSavedPost(postId: post.id) }
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isDeleteMode)
                     .onLongPressGesture(minimumDuration: 0.4) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.enterDeleteMode()

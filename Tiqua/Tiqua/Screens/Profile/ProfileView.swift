@@ -127,7 +127,7 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $showFollowersList) {
                 FollowersListView(userId: viewModel.user?.id ?? "")
             }
-            .sheet(isPresented: $showSavedView) {
+            .navigationDestination(isPresented: $showSavedView) {
                 SavedView()
             }
             .onChange(of: showSavedView) { _, newValue in

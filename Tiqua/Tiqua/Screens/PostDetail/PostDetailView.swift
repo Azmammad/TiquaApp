@@ -9,11 +9,11 @@ import Kingfisher
 
 struct PostDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var mapFocusState: MapFocusState
     @StateObject private var viewModel: PostDetailViewModel
 
     @State private var showDeleteConfirmation = false
     @State private var showErrorAlert = false
-    @State private var showMap = false
 
     init(post: Post) {
         _viewModel = StateObject(wrappedValue: PostDetailViewModel(post: post))
@@ -122,13 +122,6 @@ struct PostDetailView: View {
         .task {
             await viewModel.loadAll()
         }
-        .navigationDestination(isPresented: $showMap) {
-            MapScreenView(
-                latitude: viewModel.post.latitude,
-                longitude: viewModel.post.longitude,
-                locationName: viewModel.post.locationName
-            )
-        }
     }
 
     private var userInfoRow: some View {
@@ -142,8 +135,13 @@ struct PostDetailView: View {
 
                 if let locationName = viewModel.post.locationName {
                     Button {
-                        if viewModel.post.latitude != nil && viewModel.post.longitude != nil {
-                            showMap = true
+                        if let lat = viewModel.post.latitude,
+                           let lng = viewModel.post.longitude {
+                            mapFocusState.focusOn(
+                                latitude: lat,
+                                longitude: lng,
+                                locationName: viewModel.post.locationName
+                            )
                         }
                     } label: {
                         HStack(spacing: 4) {
@@ -502,7 +500,7 @@ struct PostDetailView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemBackground))
+            .background(Color(.secondarySystemBackground))
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

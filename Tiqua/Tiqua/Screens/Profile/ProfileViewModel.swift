@@ -77,7 +77,19 @@ final class ProfileViewModel: ObservableObject {
         do {
             let snapshot = try await db.collection("users").document(uid)
                 .collection("savedPosts").getDocuments()
-            savedCount = snapshot.documents.count
+
+            var validCount = 0
+            for doc in snapshot.documents {
+                guard let postId = doc.data()["postId"] as? String else { continue }
+                let postDoc = try? await db.collection("posts").document(postId).getDocument()
+                if let postDoc = postDoc, postDoc.exists, postDoc.data() != nil {
+                    validCount += 1
+                } else {
+                    try? await db.collection("users").document(uid)
+                        .collection("savedPosts").document(postId).delete()
+                }
+            }
+            savedCount = validCount
         } catch {
             savedCount = 0
         }
