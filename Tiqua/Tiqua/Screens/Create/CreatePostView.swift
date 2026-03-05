@@ -19,26 +19,26 @@ struct CreatePostView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    locationSection
-                        .padding(.top, 4)
+            VStack(spacing: 0) {
+                locationSection
+                    .padding(.top, 4)
 
-                    photoSection
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        photoSection
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
 
-                    captionSection
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
+                        captionSection
+                            .padding(.horizontal, 20)
+                            .padding(.top, 24)
 
-                    infoSection
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
-
-                    Spacer(minLength: 40)
+                        infoSection
+                            .padding(.horizontal, 20)
+                            .padding(.top, 24)
+                    }
+                    .padding(.bottom, 40)
                 }
-                .padding(.bottom, 40)
             }
             .navigationTitle("Create Post")
             .navigationBarTitleDisplayMode(.inline)
@@ -336,23 +336,14 @@ struct CreatePostView: View {
 
     private var captionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Caption")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.primary)
+            
 
             ZStack(alignment: .topLeading) {
-                if viewModel.caption.isEmpty {
-                    Text("Share your experience at this place...")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(.systemGray3))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 16)
-                }
-
                 TextEditor(text: $viewModel.caption)
                     .textInputAutocapitalization(.sentences)
                     .autocorrectionDisabled()
-                    .frame(minHeight: 120)
+                    .font(.system(size: 16))
+                    .frame(height: 40)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 12)
                     .scrollContentBackground(.hidden)
@@ -363,6 +354,15 @@ struct CreatePostView: View {
                             viewModel.caption = String(newValue.prefix(captionCharacterLimit))
                         }
                     }
+
+                if viewModel.caption.isEmpty {
+                    Text("Share your experience at this place...")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(.placeholderText))
+                        .padding(.horizontal, 17)
+                        .padding(.vertical, 20)
+                        .allowsHitTesting(false)
+                }
             }
         }
     }
