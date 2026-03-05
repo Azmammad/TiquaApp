@@ -83,7 +83,13 @@ final class FirebaseAuthService: AuthServiceProtocol {
         if trimmed.contains("@") {
             email = trimmed
         } else {
-            email = try await getEmail(from: trimmed)
+            do {
+                email = try await getEmail(from: trimmed)
+            } catch let authError as AuthError {
+                throw authError
+            } catch {
+                throw AuthError.userNotFound
+            }
         }
 
         let result: AuthDataResult
@@ -113,8 +119,18 @@ final class FirebaseAuthService: AuthServiceProtocol {
                         code: AuthErrorCode.tooManyRequests.rawValue,
                         userInfo: [NSLocalizedDescriptionKey: "Too many failed attempts. Please try again later."]
                     )
+                case .invalidEmail:
+                    throw NSError(
+                        domain: AuthErrorDomain,
+                        code: AuthErrorCode.invalidEmail.rawValue,
+                        userInfo: [NSLocalizedDescriptionKey: "Invalid email format. Please check and try again."]
+                    )
                 default:
-                    throw error
+                    throw NSError(
+                        domain: AuthErrorDomain,
+                        code: error.code,
+                        userInfo: [NSLocalizedDescriptionKey: "Incorrect password. Please try again."]
+                    )
                 }
             }
             throw error
@@ -219,44 +235,56 @@ final class FirebaseAuthService: AuthServiceProtocol {
     func getEmail(from username: String) async throws -> String {
         let usernameLower = username.lowercased()
 
-        let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
-        if usernameSnap.exists, let uid = usernameSnap.data()?["uid"] as? String {
-            let userSnap = try await db.collection("users").document(uid).getDocument()
-            if let email = userSnap.data()?["email"] as? String {
-                return email
-            }
-        }
-
-        let lowerSnap = try await db.collection("users")
-            .whereField("usernameLower", isEqualTo: usernameLower)
-            .limit(to: 1)
-            .getDocuments()
-
-        if let doc = lowerSnap.documents.first,
-           let email = doc.data()["email"] as? String {
-            return email
-        }
-
-        let end = usernameLower + "\u{f8ff}"
-        let rangeSnap = try await db.collection("users")
-            .whereField("username", isGreaterThanOrEqualTo: usernameLower)
-            .whereField("username", isLessThan: end)
-            .limit(to: 10)
-            .getDocuments()
-
-        for doc in rangeSnap.documents {
-            let data = doc.data()
-            if let storedUsername = data["username"] as? String,
-               storedUsername.lowercased() == usernameLower,
-               let email = data["email"] as? String {
-                if data["usernameLower"] == nil {
-                    try? await db.collection("users").document(doc.documentID).setData(
-                        ["usernameLower": usernameLower],
-                        merge: true
-                    )
+        do {
+            let usernameSnap = try await db.collection("usernames").document(usernameLower).getDocument()
+            if usernameSnap.exists, let uid = usernameSnap.data()?["uid"] as? String {
+                let userSnap = try await db.collection("users").document(uid).getDocument()
+                if let email = userSnap.data()?["email"] as? String {
+                    return email
                 }
+            }
+        } catch {
+            // fallthrough
+        }
+
+        do {
+            let lowerSnap = try await db.collection("users")
+                .whereField("usernameLower", isEqualTo: usernameLower)
+                .limit(to: 1)
+                .getDocuments()
+
+            if let doc = lowerSnap.documents.first,
+               let email = doc.data()["email"] as? String {
                 return email
             }
+        } catch {
+            // fallthrough
+        }
+
+        do {
+            let end = usernameLower + "\u{f8ff}"
+            let rangeSnap = try await db.collection("users")
+                .whereField("username", isGreaterThanOrEqualTo: usernameLower)
+                .whereField("username", isLessThan: end)
+                .limit(to: 10)
+                .getDocuments()
+
+            for doc in rangeSnap.documents {
+                let data = doc.data()
+                if let storedUsername = data["username"] as? String,
+                   storedUsername.lowercased() == usernameLower,
+                   let email = data["email"] as? String {
+                    if data["usernameLower"] == nil {
+                        try? await db.collection("users").document(doc.documentID).setData(
+                            ["usernameLower": usernameLower],
+                            merge: true
+                        )
+                    }
+                    return email
+                }
+            }
+        } catch {
+            // fallthrough
         }
 
         throw AuthError.userNotFound

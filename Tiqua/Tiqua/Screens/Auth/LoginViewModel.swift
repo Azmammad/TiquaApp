@@ -91,36 +91,40 @@ final class LoginViewModel: ObservableObject {
     }
 
     private func parseFriendlyError(_ error: NSError) -> String {
-        let errorMessage = error.localizedDescription.lowercased()
-
         if error.domain == AuthErrorDomain {
-            switch error.code {
-            case AuthErrorCode.userNotFound.rawValue:
+            let code = AuthErrorCode(rawValue: error.code)
+            switch code {
+            case .userNotFound:
                 return "No account found with this email or username."
-            case AuthErrorCode.wrongPassword.rawValue:
+            case .wrongPassword, .invalidCredential:
                 return "Incorrect password. Please try again."
-            case AuthErrorCode.invalidEmail.rawValue:
+            case .invalidEmail:
                 return "Please enter a valid email address."
-            case AuthErrorCode.userDisabled.rawValue:
+            case .userDisabled:
                 return "This account has been disabled. Please contact support."
-            case AuthErrorCode.tooManyRequests.rawValue:
+            case .tooManyRequests:
                 return "Too many failed attempts. Please try again later."
-            case AuthErrorCode.networkError.rawValue:
+            case .networkError:
                 return "Network error. Please check your internet connection."
             default:
-                break
+                if let desc = error.userInfo[NSLocalizedDescriptionKey] as? String, !desc.isEmpty {
+                    return desc
+                }
+                return "Incorrect password. Please try again."
             }
         }
 
-        if errorMessage.contains("user not found") {
-            return "Username or email not found. Please check and try again."
+        let errorMessage = error.localizedDescription.lowercased()
+
+        if errorMessage.contains("user not found") || errorMessage.contains("username") {
+            return "No account found with this username. Please check and try again."
         }
 
         if errorMessage.contains("email") && errorMessage.contains("not verified") {
             return "Please verify your email before logging in. Check your inbox for verification link."
         }
 
-        if errorMessage.contains("network") || errorMessage.contains("internet") {
+        if errorMessage.contains("network") || errorMessage.contains("internet") || errorMessage.contains("offline") {
             return "Network error. Please check your internet connection."
         }
 
@@ -128,7 +132,15 @@ final class LoginViewModel: ObservableObject {
             return "Incorrect password. Please try again."
         }
 
-        return "Login failed. Please check your credentials and try again."
+        if errorMessage.contains("permission") || errorMessage.contains("denied") {
+            return "Unable to connect to the server. Please try again."
+        }
+
+        if let desc = error.userInfo[NSLocalizedDescriptionKey] as? String, !desc.isEmpty {
+            return desc
+        }
+
+        return "Something went wrong. Please try again."
     }
 
     private func show(_ message: String) {
