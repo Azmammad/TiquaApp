@@ -128,4 +128,4 @@ This project is proprietary. All rights reserved.
 
 ## Author
 
-**Əzi Cəbrayılov** — [@Azmammad](https://github.com/Azmammad)
+**Azmammad Jabrayilov** — [@Azmammad](https://github.com/Azmammad)
