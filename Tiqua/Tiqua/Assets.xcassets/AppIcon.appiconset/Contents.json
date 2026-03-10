@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "TIQUA-LOGO.jpeg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "TIQUA_LOGO_DARK.jpeg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
