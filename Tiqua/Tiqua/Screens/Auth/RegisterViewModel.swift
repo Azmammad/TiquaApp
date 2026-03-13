@@ -9,7 +9,14 @@ import Combine
 
 @MainActor
 final class RegisterViewModel: ObservableObject {
-    @Published var username: String = ""
+    @Published var username: String = "" {
+        didSet {
+            let lowered = username.lowercased()
+            if lowered != username {
+                username = lowered
+            }
+        }
+    }
     @Published var email: String = ""
     @Published var password: String = ""
 
@@ -31,6 +38,12 @@ final class RegisterViewModel: ObservableObject {
 
     convenience init() {
         self.init(authService: FirebaseAuthService())
+    }
+
+    private static let allowedUsernameRegex = #"^[a-z0-9_]+$"#
+
+    private func isUsernameFormatValid(_ value: String) -> Bool {
+        value.range(of: Self.allowedUsernameRegex, options: .regularExpression) != nil
     }
 
     private func observeUsernameChanges() {
@@ -56,6 +69,11 @@ final class RegisterViewModel: ObservableObject {
 
         guard trimmedValue.count >= 3 else {
             isUsernameAvailable = nil
+            return
+        }
+
+        guard isUsernameFormatValid(trimmedValue) else {
+            isUsernameAvailable = false
             return
         }
 
@@ -101,6 +119,11 @@ final class RegisterViewModel: ObservableObject {
 
         if trimmedUsername.count < 3 {
             show("Username must be at least 3 characters long.")
+            return false
+        }
+
+        if !isUsernameFormatValid(trimmedUsername) {
+            show("Username can only contain lowercase letters, numbers, and underscores.")
             return false
         }
 

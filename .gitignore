@@ -1,0 +1,7 @@
+# Firebase
+Tiqua/SupportingFiles/GoogleService-Info.plist
+
+# Xcode
+DerivedData
+*.xcuserdata
+.DS_Store
