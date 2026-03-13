@@ -67,6 +67,11 @@ struct SavedView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(viewModel.isDeleteMode)
+                    .onTapGesture {
+                        if viewModel.isDeleteMode {
+                            Task { await viewModel.removeSavedPost(postId: post.id) }
+                        }
+                    }
                     .onLongPressGesture(minimumDuration: 0.4) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.enterDeleteMode()

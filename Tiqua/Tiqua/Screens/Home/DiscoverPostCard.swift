@@ -18,31 +18,37 @@ struct DiscoverPostCard: View {
     @State private var showHeart: Bool = false
     @State private var heartScale: CGFloat = 0.4
     @State private var heartOpacity: Double = 0
+    @State private var navigateToDetail: Bool = false
 
     private let interactionService: PostInteractionServiceProtocol = FirebasePostInteractionService()
     private let activityService = FirebaseActivityService()
 
     var body: some View {
-        NavigationLink(destination: PostDetailView(post: post)) {
-            ZStack {
-                imageLayer
+        ZStack {
+            imageLayer
 
-                gradientLayer
+            gradientLayer
 
-                overlayContent
+            overlayContent
 
-                if showHeart {
-                    heartBurst
-                }
+            if showHeart {
+                heartBurst
             }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            TapGesture(count: 2).onEnded {
-                handleDoubleTapLike()
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .contentShape(RoundedRectangle(cornerRadius: 24))
+        .onTapGesture(count: 2) {
+            handleDoubleTapLike()
+        }
+        .onTapGesture(count: 1) {
+            navigateToDetail = true
+        }
+        .background(
+            NavigationLink(destination: PostDetailView(post: post), isActive: $navigateToDetail) {
+                EmptyView()
             }
+            .hidden()
         )
         .task {
             await loadStates()
@@ -75,6 +81,7 @@ struct DiscoverPostCard: View {
             endPoint: .bottom
         )
         .frame(width: width, height: height)
+        .allowsHitTesting(false)
     }
 
     private var overlayContent: some View {
@@ -87,12 +94,14 @@ struct DiscoverPostCard: View {
                     Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.white)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
+                        .contentShape(Circle())
                 }
-                .padding(.top, 16)
-                .padding(.trailing, 16)
+                .buttonStyle(.plain)
+                .padding(.top, 14)
+                .padding(.trailing, 14)
             }
 
             Spacer()
@@ -110,6 +119,7 @@ struct DiscoverPostCard: View {
                         .foregroundColor(.white.opacity(0.85))
                         .lineLimit(1)
                 }
+                .allowsHitTesting(false)
 
                 Spacer()
 
@@ -119,13 +129,15 @@ struct DiscoverPostCard: View {
                     Image(systemName: isLiked ? "heart.fill" : "heart")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(isLiked ? .red : .white)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                         .background(.ultraThinMaterial)
                         .clipShape(Circle())
+                        .contentShape(Circle())
                 }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 20)
+            .padding(.bottom, 18)
         }
         .frame(width: width, height: height)
     }
@@ -136,6 +148,7 @@ struct DiscoverPostCard: View {
             .foregroundColor(.white.opacity(0.9))
             .scaleEffect(heartScale)
             .opacity(heartOpacity)
+            .allowsHitTesting(false)
     }
 
     private func loadStates() async {

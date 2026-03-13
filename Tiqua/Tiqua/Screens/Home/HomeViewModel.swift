@@ -61,7 +61,7 @@ final class HomeViewModel: ObservableObject {
                 .getDocuments()
 
             let fetched = snapshot.documents.compactMap { decode(document: $0) }
-            allPosts = fetched.shuffled()
+            allPosts = fetched
         } catch {
             errorMessage = "Failed to load posts."
         }

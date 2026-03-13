@@ -113,17 +113,6 @@ struct RegisterView: View {
                 .padding(.bottom, 32)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        router.route = .onboarding
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
             .alert(
                 viewModel.didRegisterSuccessfully ? "Success" : "Error",
                 isPresented: $viewModel.showAlert
@@ -139,4 +128,3 @@ struct RegisterView: View {
         }
     }
 }
-
