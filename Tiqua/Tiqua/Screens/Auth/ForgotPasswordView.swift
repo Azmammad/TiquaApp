@@ -24,12 +24,13 @@ struct ForgotPasswordView: View {
                     VStack(spacing: 8) {
                         Text("Forgot Password")
                             .font(.system(size: 32, weight: .bold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .foregroundColor(.appPrimary)
 
                         Text("Enter your email address and we'll send you a link to reset your password")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(.top, 24)
 

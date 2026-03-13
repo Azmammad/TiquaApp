@@ -59,13 +59,13 @@ struct CreatePostView: View {
                     } label: {
                         Text("Post")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(viewModel.postButtonDisabled ? .secondary : .accentColor)
+                            .foregroundColor(viewModel.postButtonDisabled ? .secondary : .white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(
                                 viewModel.postButtonDisabled
                                     ? Color(.systemGray5)
-                                    : Color.accentColor.opacity(0.12)
+                                    : Color.accentColor
                             )
                             .cornerRadius(20)
                     }

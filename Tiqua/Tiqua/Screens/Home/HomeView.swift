@@ -11,6 +11,8 @@ struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @State private var showSearch = false
     @State private var currentPostId: String?
+    @State private var showCountryFilter = false
+    @State private var pendingCountry: String?
 
     private var currentPost: Post? {
         guard let id = currentPostId else {
@@ -78,6 +80,9 @@ struct HomeView: View {
             .fullScreenCover(isPresented: $showSearch) {
                 SearchView(viewModel: viewModel)
             }
+            .sheet(isPresented: $showCountryFilter) {
+                countryFilterSheet
+            }
         }
     }
 
@@ -104,15 +109,9 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
 
-            Menu {
-                Button("All Countries") {
-                    viewModel.selectedCountry = nil
-                }
-                ForEach(viewModel.availableCountries, id: \.self) { country in
-                    Button(country) {
-                        viewModel.selectedCountry = country
-                    }
-                }
+            Button {
+                pendingCountry = viewModel.selectedCountry
+                showCountryFilter = true
             } label: {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 15, weight: .medium))
@@ -125,6 +124,61 @@ struct HomeView: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 6)
+    }
+
+    private var countryFilterSheet: some View {
+        NavigationStack {
+            List {
+                Button {
+                    pendingCountry = nil
+                } label: {
+                    HStack {
+                        Text("All Countries")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if pendingCountry == nil {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                    }
+                }
+
+                ForEach(viewModel.availableCountries, id: \.self) { country in
+                    Button {
+                        pendingCountry = country
+                    } label: {
+                        HStack {
+                            Text(country)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if pendingCountry == country {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter by Country")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        showCountryFilter = false
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        viewModel.selectedCountry = pendingCountry
+                        showCountryFilter = false
+                    }
+                    .font(.system(size: 17, weight: .semibold))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     private var emptyView: some View {

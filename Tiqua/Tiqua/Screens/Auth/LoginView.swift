@@ -108,17 +108,6 @@ struct LoginView: View {
                 .padding(.bottom, 32)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        router.route = .onboarding
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
             .onChange(of: viewModel.didLogin) { _, newValue in
                 if newValue {
                     preferences.isLoggedIn = true
